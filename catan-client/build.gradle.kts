@@ -4,7 +4,7 @@ val kotlinVersion = "1.7.10"
 val ktorVersion = "2.1.3"
 
 plugins {
-    kotlin("jvm") version "1.7.10"
+    id("kotlin")
     application
     id("org.openjfx.javafxplugin") version "0.0.7"
     id("com.github.johnrengelman.shadow") version "7.1.2"

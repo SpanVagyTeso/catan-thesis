@@ -107,8 +107,9 @@ class ViewController : Controller() {
     fun buyCity(vertexId: String){
         socket.sendDto(
             BuyDto(
-                BuyType.CITY,
-                vertexId
+                vertexId,
+                BuyType.CITY
+
             )
         )
     }
@@ -116,8 +117,8 @@ class ViewController : Controller() {
     fun buyVillage(vertexId: String){
         socket.sendDto(
             BuyDto(
+                vertexId,
                 BuyType.VILLAGE,
-                vertexId
             )
         )
     }
@@ -125,8 +126,8 @@ class ViewController : Controller() {
     fun buyRoad(edgeId: String){
         socket.sendDto(
             BuyDto(
-                BuyType.ROAD,
-                edgeId
+                edgeId,
+                BuyType.ROAD
             )
         )
     }
@@ -134,6 +135,7 @@ class ViewController : Controller() {
     fun buyUpgrade(){
         socket.sendDto(
             BuyDto(
+                "",
                 BuyType.UPGRADE
             )
         )

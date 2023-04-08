@@ -15,12 +15,12 @@ class LobbySelectionView: BaseView() {
 
     override fun refresh() {
         println("Lobby Selection refreshed")
-        val a = controller.lobbies
+        val lobbies = controller.lobbies
         lobbyFlow.clear()
         lobbyFlow.apply {
             hgap = 5.0
             vgap = 5.0
-            a.forEach {
+            lobbies.forEach {
                 this.children.add(it.toGrid())
             }
         }
