@@ -8,8 +8,8 @@ import javafx.scene.paint.Color
 import tornadofx.*
 
 
-class LobbySelectionView: BaseView() {
-    private val lobbyFlow = flowpane{}
+class LobbySelectionView : BaseView() {
+    private val lobbyFlow = flowpane {}
     private var selectedId: String = ""
 
 
@@ -26,20 +26,21 @@ class LobbySelectionView: BaseView() {
         }
     }
 
-    private fun refreshLobbies(){
+    private fun refreshLobbies() {
         controller.sendGetLobbies()
     }
 
-    private fun createLobby(){
+    private fun createLobby() {
         controller.createLobby()
     }
-    private fun joinLobby(){
-        if(selectedId == "") return
+
+    private fun joinLobby() {
+        if (selectedId == "") return
         controller.joinLobby(selectedId)
     }
 
-    override val root = borderpane{
-        center = scrollpane{
+    override val root = borderpane {
+        center = scrollpane {
             refresh()
             add(lobbyFlow)
         }
@@ -50,15 +51,15 @@ class LobbySelectionView: BaseView() {
                     refreshLobbies()
                 }
             }
-            button{
+            button {
                 text = "Create"
-                action{
+                action {
                     createLobby()
                 }
             }
-            button{
+            button {
                 text = "Join"
-                action{
+                action {
                     joinLobby()
                 }
             }
@@ -66,16 +67,16 @@ class LobbySelectionView: BaseView() {
     }
 
     private fun LobbyDto.toGrid(): GridPane {
-        return gridpane{
+        return gridpane {
             row {
                 hgap = 10.0
-                label{
+                label {
                     text = this@toGrid.lobbyName
                     style {
                         fontSize = 14.px
                     }
                 }
-                label{
+                label {
                     text = "Size: " + this@toGrid.maxSize
                 }
 
@@ -84,7 +85,11 @@ class LobbySelectionView: BaseView() {
             this@toGrid.users.forEach {
                 row {
                     label {
-                        text = (if(it == this@toGrid.ownerUser){"\uD83D\uDC51 "}else{""})+it
+                        text = (if (it == this@toGrid.ownerUser) {
+                            "\uD83D\uDC51 "
+                        } else {
+                            ""
+                        }) + it
                     }
                     style {
                         borderColor += box(
@@ -109,16 +114,16 @@ class LobbySelectionView: BaseView() {
                     left = 10.px,
                     bottom = 10.px
                 )
-                if(this@toGrid.sessionId == selectedId){
+                if (this@toGrid.sessionId == selectedId) {
                     backgroundColor += Color.LIGHTBLUE
                 }
             }
-            id=this@toGrid.sessionId
+            id = this@toGrid.sessionId
             onMouseClicked = EventHandler {
-                if(it.button == MouseButton.PRIMARY ){
-                    selectedId = if(selectedId == this@toGrid.sessionId){
+                if (it.button == MouseButton.PRIMARY) {
+                    selectedId = if (selectedId == this@toGrid.sessionId) {
                         ""
-                    }else{
+                    } else {
                         this@toGrid.sessionId!!
                     }
                     println(selectedId)

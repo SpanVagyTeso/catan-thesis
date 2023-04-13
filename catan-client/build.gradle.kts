@@ -1,13 +1,13 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-val kotlinVersion = "1.7.10"
+val kotlinVersion = "1.8.20"
 val ktorVersion = "2.1.3"
 
 plugins {
-    id("kotlin")
     application
     id("org.openjfx.javafxplugin") version "0.0.7"
     id("com.github.johnrengelman.shadow") version "7.1.2"
+    kotlin("jvm") version "1.8.20"
 }
 
 group = "hu.span"
@@ -44,4 +44,10 @@ tasks.withType<KotlinCompile> {
 
 application {
     mainClass.set("MainKt")
+}
+
+java{
+    toolchain{
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
 }
