@@ -14,36 +14,40 @@ import kotlinx.coroutines.runBlocking
 import kotlin.system.exitProcess
 
 class SocketController {
-    lateinit var socket : Socket
+    lateinit var socket: Socket
     lateinit var receiveChannel: ByteReadChannel
     lateinit var sendChannel: ByteWriteChannel
-    lateinit var handler : (String)-> Unit
+    lateinit var handler: (String) -> Unit
 
     fun run() {
         val selectorManager = SelectorManager(Dispatchers.IO)
+        try {
+            runBlocking {
+                socket = aSocket(selectorManager).tcp().connect("localhost", 8000)
 
-        runBlocking {
-            socket = aSocket(selectorManager).tcp().connect("localhost", 8000)
+                receiveChannel = socket.openReadChannel()
+                sendChannel = socket.openWriteChannel(autoFlush = true)
+                launch(Dispatchers.IO) {
+                    while (true) {
+                        val receivedMessage = receiveChannel.readUTF8Line()
+                        if (receivedMessage != null) {
+                            launch { handler(receivedMessage) }
 
-            receiveChannel = socket.openReadChannel()
-            sendChannel = socket.openWriteChannel(autoFlush = true)
-            launch(Dispatchers.IO) {
-                while (true) {
-                    val receivedMessage = receiveChannel.readUTF8Line()
-                    if (receivedMessage != null) {
-                        launch { handler(receivedMessage) }
-
-                    } else {
-                        println("Server closed a connection")
-                        socket.close()
-                        selectorManager.close()
-                        exitProcess(0)
+                        } else {
+                            println("Server closed a connection")
+                            socket.close()
+                            selectorManager.close()
+                            exitProcess(0)
+                        }
                     }
                 }
             }
+        } catch (_: Exception) {
+
         }
     }
-    fun sendDto(dto: DtoType){
+
+    fun sendDto(dto: DtoType) {
         runBlocking {
             launch(Dispatchers.IO) {
                 sendChannel.writeStringUtf8("${dto.toJson()}\n")

@@ -15,15 +15,16 @@ import kotlin.math.sqrt
 
 private const val TILE_HEIGHT = 60.0
 
-class GameView: BaseView() {
+class GameView : BaseView() {
+    val gameController = controller.gameController
 
     val center = stackpane()
     val playField = borderpane {
-        bottom = gridpane{
-            row{
-                button{
+        bottom = gridpane {
+            row {
+                button {
                     text = "Buy"
-                    action{
+                    action {
                         buyMenu()
                     }
                 }
@@ -33,16 +34,16 @@ class GameView: BaseView() {
         left = gridpane {
             //other player
         }
-        right = gridpane{
+        right = gridpane {
             //other player
         }
-        top = gridpane{
+        top = gridpane {
             //other player
         }
 
         onKeyPressed = EventHandler {
             println("Key pressed")
-            if(it.code == KeyCode.ESCAPE){
+            if (it.code == KeyCode.ESCAPE) {
                 state = 0
                 closeBuyMenu()
                 refresh()
@@ -51,34 +52,39 @@ class GameView: BaseView() {
 
     }
     var state: Int = 0
-    set(value){
-        field = value
-        refresh()
-    }
+        set(value) {
+            field = value
+            refresh()
+        }
 
     val blur: BoxBlur = BoxBlur()
 
-    val popUp = stackpane{}
+    val popUp = stackpane {}
+
+    init {
+        gameController.test()
+        refresh()
+    }
 
     override fun refresh() {
         val yOffSet = calculateYOffSetFromHeight(TILE_HEIGHT)
         center.clear()
         center.apply {
-            group{
+            group {
                 val s = controller.map().size
-                var off = s/2
+                var off = s / 2
                 controller.map().forEachIndexed { rowInd, row ->
                     println("row")
                     row.forEachIndexed { colInd, it ->
-                        hexagon(TILE_HEIGHT, it){
+                        hexagon(TILE_HEIGHT, it) {
                             offsetX = TILE_HEIGHT * 2 * colInd - TILE_HEIGHT * off
                             offsetY = yOffSet * rowInd
                         }
                     }
-                    if(rowInd >= s/2) off--
+                    if (rowInd >= s / 2) off--
                     else off++
                 }
-                if(state == 4){
+                if (state == 4) {
                     //Available roads
                     controller.gameController.map.edges.forEach {
                         line {
@@ -93,11 +99,11 @@ class GameView: BaseView() {
                         }
                     }
                 }
-                if(state == 5 || state == 6){
+                if (state == 5 || state == 6) {
                     //Available corner locations
                     corners.forEach { (k, v) ->
 //                        println("$k -> ${v.first} ${v.second}")
-                        circleText(TILE_HEIGHT/5, k){
+                        circleText(TILE_HEIGHT / 5, k) {
                             setAllId(k)
                             centerX(v.first)
                             centerY(v.second)
@@ -107,30 +113,29 @@ class GameView: BaseView() {
                 }
 
                 onMouseClicked = EventHandler {
-                    if(it.button == MouseButton.PRIMARY){
+                    if (it.button == MouseButton.PRIMARY) {
                         val id = it.pickResult.intersectedNode.id
                         println("Clicked id: $id $state")
                         val t = controller.gameController.map.tile(id)
-                        if(t.size == 1){
+                        if (t.size == 1) {
                             val tt = t[0]
 //                            tt.vertices.forEach {
 //                                println(it)
 //                            }
                         }
-                        if(id.startsWith("E")){
+                        if (id.startsWith("E")) {
                             println("EDGE clicked")
-                            if(state == 4) {
+                            if (state == 4) {
                                 state = 0
                                 controller.buyRoad(id)
                             }
                         }
-                        if(id.startsWith("V")){
-                            if(state == 5){
+                        if (id.startsWith("V")) {
+                            if (state == 5) {
                                 state = 0
                                 controller.buyVillage(id)
-                            }
-                            else if( state == 6){
-                                state =0
+                            } else if (state == 6) {
+                                state = 0
                                 controller.buyCity(id)
                             }
                         }
@@ -144,52 +149,51 @@ class GameView: BaseView() {
         add(playField)
     }
 
-    private fun calculateYOffSetFromHeight(height: Double): Double {
-        return sqrt(
-            (height / cos(Math.PI / 60) * 2).pow(2.0) - (height.pow(2.0))
-        )
-    }
+    private fun calculateYOffSetFromHeight(height: Double) = sqrt(
+        (height / cos(Math.PI / 60) * 2).pow(2.0) - (height.pow(2.0))
+    )
 
-    fun buyMenu(){
+
+    fun buyMenu() {
         state = 1
-        popUp.apply{
+        popUp.apply {
             rectangle {
-                width = root.width/2
-                height = root.height/2
+                width = root.width / 2
+                height = root.height / 2
                 fill = WHITE
             }
-            group{
-                gridpane{
+            group {
+                gridpane {
                     hgap = 10.0
-                    row{
+                    row {
                         label {
-                            text="Resources"
+                            text = "Resources"
                         }
                     }
-                    row{
+                    row {
                         label {
-                            text="Road"
+                            text = "Road"
                         }
                         label {
-                            text="Village"
+                            text = "Village"
                         }
                         label {
-                            text="City"
+                            text = "City"
                         }
                         label {
-                            text="Upgrade"
+                            text = "Upgrade"
                         }
                     }
-                    row{
+                    row {
                         rectangle {
                             width = 10.0
                             height = 10.0
                         }
                         village {
-                            size=25.0
+                            size = 25.0
                         }
-                        city{
-                            size=25.0
+                        city {
+                            size = 25.0
                         }
                         rectangle {
                             width = 10.0
@@ -197,30 +201,30 @@ class GameView: BaseView() {
                             fill = YELLOW
                         }
                     }
-                    row{
+                    row {
                         button {
-                            text="Buy"
+                            text = "Buy"
                             action {
                                 closeBuyMenu()
                                 buyRoad()
                             }
                         }
                         button {
-                            text="Buy"
+                            text = "Buy"
                             action {
                                 closeBuyMenu()
                                 buyVillage()
                             }
                         }
                         button {
-                            text="Buy"
+                            text = "Buy"
                             action {
                                 closeBuyMenu()
                                 buyCity()
                             }
                         }
                         button {
-                            text="Buy"
+                            text = "Buy"
                             action {
                                 closeBuyMenu()
                                 buyUpgrade()
@@ -234,7 +238,7 @@ class GameView: BaseView() {
         root.add(popUp)
     }
 
-    fun closeBuyMenu(){
+    fun closeBuyMenu() {
         playField.effect = null
         root.clear()
         root.add(playField)
@@ -242,19 +246,21 @@ class GameView: BaseView() {
         blur.width = 0.0
     }
 
-    fun buyRoad(){
+    fun buyRoad() {
         state = 4
     }
 
-    fun buyVillage(){
+    fun buyVillage() {
         state = 5
     }
 
-    fun buyCity(){
+    fun buyCity() {
         state = 6
     }
 
-    fun buyUpgrade(){
+    fun buyUpgrade() {
+        state = 0
+        return
         controller.buyUpgrade()
         state = 0
     }
