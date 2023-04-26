@@ -2,6 +2,7 @@ package gui.custom
 
 import com.catan.sdk.entities.FieldType.*
 import com.catan.sdk.entities.Tile
+import com.catan.sdk.entities.Vertex
 import javafx.scene.Group
 import javafx.scene.Parent
 import javafx.scene.paint.Color
@@ -13,7 +14,7 @@ import kotlin.math.sin
 private const val radianStep = (2 * Math.PI) / 6
 
 // ID -> (x, y)
-val corners = hashMapOf<String, Pair<Double, Double>>()
+val corners = hashMapOf<Vertex, Pair<Double, Double>>()
 
 class Hexagon(
     size: Double,
@@ -78,7 +79,7 @@ class Hexagon(
             polygon.points.add(x)
             polygon.points.add(y)
 
-            corners[tile.vertices[i]!!.id] = x to y
+            corners[tile.vertices[i]!!] = x to y
         }
         rolledNumberCircle.centerX(-offsetX)
         rolledNumberCircle.centerY(-offsetY)

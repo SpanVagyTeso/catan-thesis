@@ -8,26 +8,27 @@ import javafx.scene.shape.Polygon
 import javafx.scene.shape.Rectangle
 import tornadofx.*
 
-class City : GridPane(){
+class City : GridPane() {
     val walls: Rectangle
     val lhsRoof: Polygon
     val rhsRoof: Rectangle
-    var size: Double = 10.0
-        set(value){
+    var size: Double = 15.0
+        set(value) {
             field = value
             morph()
         }
-    init{
+
+    init {
         walls = Rectangle()
         lhsRoof = Polygon()
         rhsRoof = Rectangle()
         morph()
     }
 
-    fun morph(){
+    fun morph() {
         clear()
-        walls.height=size
-        walls.width=size * 2
+        walls.height = size
+        walls.width = size * 2
         lhsRoof.points.clear()
         lhsRoof.points.clear()
         lhsRoof.points.addAll(
@@ -36,25 +37,26 @@ class City : GridPane(){
                 0.0,
                 size,
                 0.0,
-                size/2,
-                -size*0.65,
+                size / 2,
+                -size * 0.65,
             )
         )
         lhsRoof.fill = Color.RED
         rhsRoof.width = size / 3
-        rhsRoof.height = size *0.65
+        rhsRoof.height = size * 0.65
         rhsRoof.fill = Color.GREY
-        row{
+        row {
             hbox {
                 add(lhsRoof)
                 add(rhsRoof)
-                spacing = size/4
+                spacing = size / 4
             }
         }
-        row{
+        row {
             add(walls)
         }
     }
 }
-fun Parent.city(op: City.() -> Unit = {})=
-    City(). attachTo(this, op)
+
+fun Parent.city(op: City.() -> Unit = {}) =
+    City().attachTo(this, op)

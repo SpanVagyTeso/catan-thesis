@@ -14,7 +14,7 @@ class Village :GridPane(){
 
     val walls: Rectangle
     val roof: Polygon
-    var size: Double = 10.0
+    var size: Double = 15.0
         set(value){
             field = value
             morph()

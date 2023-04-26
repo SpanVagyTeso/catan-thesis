@@ -1,5 +1,7 @@
 package gui.views
 
+import com.catan.sdk.entities.BuildType
+import com.catan.sdk.entities.BuildType.*
 import gui.custom.*
 import javafx.event.EventHandler
 import javafx.scene.effect.BoxBlur
@@ -31,15 +33,6 @@ class GameView : BaseView() {
             }
         }
         this@borderpane.center = this@GameView.center
-        left = gridpane {
-            //other player
-        }
-        right = gridpane {
-            //other player
-        }
-        top = gridpane {
-            //other player
-        }
 
         onKeyPressed = EventHandler {
             println("Key pressed")
@@ -74,7 +67,7 @@ class GameView : BaseView() {
                 val s = controller.map().size
                 var off = s / 2
                 controller.map().forEachIndexed { rowInd, row ->
-                    println("row")
+
                     row.forEachIndexed { colInd, it ->
                         hexagon(TILE_HEIGHT, it) {
                             offsetX = TILE_HEIGHT * 2 * colInd - TILE_HEIGHT * off
@@ -84,15 +77,36 @@ class GameView : BaseView() {
                     if (rowInd >= s / 2) off--
                     else off++
                 }
+                corners.forEach { (k, v) ->
+                    if (k.owner != null) {
+                        when (k.buildingType) {
+                            VILLAGE -> {
+                                village {
+                                    layoutX = v.first - boundsInLocal.maxX
+                                    layoutY = v.second - boundsInLocal.maxY
+                                }
+                            }
+
+                            CITY -> {
+                                city {
+                                    layoutX = v.first - boundsInLocal.maxX
+                                    layoutY = v.second - boundsInLocal.maxY
+                                }
+                            }
+
+                            else -> {}
+                        }
+                    }
+                }
                 if (state == 4) {
                     //Available roads
                     controller.gameController.map.edges.forEach {
                         line {
                             val endpoint = it.endPoints
-                            startX = corners[endpoint.first.id]!!.first
-                            startY = corners[endpoint.first.id]!!.second
-                            endX = corners[endpoint.second.id]!!.first
-                            endY = corners[endpoint.second.id]!!.second
+                            startX = corners[endpoint.first]!!.first
+                            startY = corners[endpoint.first]!!.second
+                            endX = corners[endpoint.second]!!.first
+                            endY = corners[endpoint.second]!!.second
                             strokeWidth = 3.0
                             id = it.id
                             stroke = RED
@@ -102,13 +116,13 @@ class GameView : BaseView() {
                 if (state == 5 || state == 6) {
                     //Available corner locations
                     corners.forEach { (k, v) ->
-//                        println("$k -> ${v.first} ${v.second}")
-                        circleText(TILE_HEIGHT / 5, k) {
-                            setAllId(k)
-                            centerX(v.first)
-                            centerY(v.second)
-                            circle.fill = WHITE
-                        }
+                        if (k.owner == null)
+                            circleText(TILE_HEIGHT / 5, k.id) {
+                                setAllId(k.id)
+                                centerX(v.first)
+                                centerY(v.second)
+                                circle.fill = WHITE
+                            }
                     }
                 }
 
@@ -119,9 +133,9 @@ class GameView : BaseView() {
                         val t = controller.gameController.map.tile(id)
                         if (t.size == 1) {
                             val tt = t[0]
-//                            tt.vertices.forEach {
-//                                println(it)
-//                            }
+                            tt.vertices.forEach {
+                                println(it)
+                            }
                         }
                         if (id.startsWith("E")) {
                             println("EDGE clicked")
