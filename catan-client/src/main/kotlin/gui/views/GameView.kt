@@ -115,14 +115,18 @@ class GameView : BaseView() {
                 }
                 if (state == 5 || state == 6) {
                     //Available corner locations
-                    corners.forEach { (k, v) ->
-                        if (k.owner == null)
-                            circleText(TILE_HEIGHT / 5, k.id) {
-                                setAllId(k.id)
-                                centerX(v.first)
-                                centerY(v.second)
-                                circle.fill = WHITE
-                            }
+                    print("GOOD CORNERS: ")
+                    gameController.getGoodCorners().forEach {vertex ->
+                        print(vertex)
+                        corners[vertex]!!.let {
+                            if (vertex.owner == null)
+                                circleText(TILE_HEIGHT / 5, vertex.id) {
+                                    setAllId(vertex.id)
+                                    centerX(it.first)
+                                    centerY(it.second)
+                                    circle.fill = WHITE
+                                }
+                        }
                     }
                 }
 
