@@ -2,3 +2,6 @@
 .idea
 build
 gradle
+*.jar
+*.class
+*.tar
