@@ -18,7 +18,7 @@ class GameController(
     val players = mutableMapOf<String, Player>()
     var me: Player? = null
     var currentPlayer: Player? = null
-    var state = GameState.Normal
+    var state = GameState.OtherPlayer
         set(value) {
             field = value
             refreshView?.let { it() }
