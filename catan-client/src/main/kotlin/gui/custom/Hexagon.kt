@@ -19,7 +19,7 @@ val corners = hashMapOf<Vertex, Pair<Double, Double>>()
 class Hexagon(
     size: Double,
     var tile: Tile
-): Group() {
+) : Group() {
     var polygon: Polygon = Polygon()
     var rolledNumberCircle: CircleText
 
@@ -46,7 +46,7 @@ class Hexagon(
 
     init {
         polygon.id = tile.id
-        rolledNumberCircle = CircleText(size/4, tile.rolledNumber.toString())
+        rolledNumberCircle = CircleText(size / 4, tile.rolledNumber.toString())
         rolledNumberCircle.setAllId(tile.id)
 
         this.height = size
@@ -72,7 +72,7 @@ class Hexagon(
         polygon.strokeWidth = 1.0
         polygon.stroke = Color.BLACK
         val side = height / cos(Math.PI / 6.0)
-        for (i in 0 .. 5) {
+        for (i in 0..5) {
             val angle = radianStep * (1.0 - i.toDouble()) + defaultAngle
             val x = cos(angle) * side - offsetX
             val y = sin(angle) * side - offsetY
@@ -83,7 +83,7 @@ class Hexagon(
         }
         rolledNumberCircle.centerX(-offsetX)
         rolledNumberCircle.centerY(-offsetY)
-        rolledNumberCircle.circle.fill= Color.WHITE
+        rolledNumberCircle.circle.fill = if (tile.isBlocked) Color.BLACK else Color.WHITE
     }
 }
 

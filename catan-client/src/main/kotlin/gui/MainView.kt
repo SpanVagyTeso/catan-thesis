@@ -1,8 +1,9 @@
 package gui
 
+import com.catan.sdk.entities.Player
+import com.catan.sdk.entities.PlayerColor
 import controller.ViewController
-import gui.custom.city
-import gui.custom.village
+import gui.custom.OtherPlayerCard
 import gui.views.GameView
 import gui.views.LoginView
 import gui.views.RegisterView
@@ -52,8 +53,8 @@ class MainView : View(title = "Catan") {
             }
 
         }
-        left = city {
-            size = 30.0
+        left = OtherPlayerCard(Player("almafa", PlayerColor.RED)).apply{
+            morph()
         }
 
     }

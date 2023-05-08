@@ -1,11 +1,14 @@
 package gui.views
 
-import com.catan.sdk.entities.BuildType
+import com.catan.sdk.entities.*
 import com.catan.sdk.entities.BuildType.*
+import com.catan.sdk.entities.DevelopmentTypes.*
+import controller.GameState
+import controller.GameState.*
 import gui.custom.*
 import javafx.event.EventHandler
+import javafx.scene.Parent
 import javafx.scene.effect.BoxBlur
-import javafx.scene.effect.Effect
 import javafx.scene.input.KeyCode
 import javafx.scene.input.MouseButton
 import javafx.scene.paint.Color
@@ -20,148 +23,311 @@ private const val TILE_HEIGHT = 60.0
 class GameView : BaseView() {
     val gameController = controller.gameController
 
-    val center = stackpane()
+    val mapHud = stackpane()
+    val otherPlayerHud = gridpane()
+    val playerHud = gridpane()
+    val currentAction = stackpane()
+
     val playField = borderpane {
-        bottom = gridpane {
-            row {
-                button {
-                    text = "Buy"
-                    action {
-                        buyMenu()
-                    }
+        bottom = playerHud
+        center = mapHud
+        right = otherPlayerHud
+        top = currentAction
+
+        onKeyPressed = EventHandler {
+            if (it.code == KeyCode.ESCAPE) {
+                if (gameController.state !in setOf(OtherPlayer, StartOther, Start, StartPlaceRoad)) {
+                    setGameState(Normal)
+                    closeMenu()
+                    refresh()
                 }
             }
         }
-        this@borderpane.center = this@GameView.center
-
-        onKeyPressed = EventHandler {
-            println("Key pressed")
-            if (it.code == KeyCode.ESCAPE) {
-                state = 0
-                closeBuyMenu()
-                refresh()
+        onMouseClicked = EventHandler {
+            if (it.button != MouseButton.PRIMARY) return@EventHandler
+            val id = it.pickResult.intersectedNode.id
+            if (id != null) {
+                println("Clicked on id $id")
+                handleClick(id)
             }
         }
 
     }
-    var state: Int = 0
-        set(value) {
-            field = value
-            refresh()
-        }
+
 
     val blur: BoxBlur = BoxBlur()
 
-    val popUp = stackpane {}
+    val popUp = stackpane()
 
     init {
         gameController.test()
+        gameController.refreshView = { refresh() }
         refresh()
     }
 
     override fun refresh() {
-        val yOffSet = calculateYOffSetFromHeight(TILE_HEIGHT)
-        center.clear()
-        center.apply {
+        refreshMapHud()
+        refreshPlayerHud()
+        refreshOtherPlayerHud()
+        refreshCurrentAction()
+    }
+
+    private fun refreshCurrentAction() {
+        currentAction.clear()
+        currentAction.apply {
+            label {
+                text = currentActionText() + " ${gameController.state}"
+            }
+        }
+    }
+
+    private fun currentActionText(): String {
+        if (gameController.currentPlayer != gameController.me) {
+            return "${gameController.currentPlayer?.username}'s turn"
+        }
+
+        return when (gameController.state) {
+            UseKnight -> {
+                "Use your knight please!"
+            }
+
+            UseRoads -> {
+                "Place down your road(s)!"
+            }
+
+            UseYearsOfPlenty -> {
+                "Choose your two resources!"
+            }
+
+            UseMonopoly -> {
+                "Choose a resource to monopolize!"
+            }
+
+            Start -> {
+                "Place down a village!"
+            }
+
+            StartPlaceRoad -> {
+                "Place down a road next to the previous village!"
+            }
+
+            else -> {
+                "Your turn"
+            }
+        }
+    }
+
+    private fun refreshMapHud() {
+        mapHud.clear()
+        mapHud.apply {
             group {
-                val s = controller.map().size
-                var off = s / 2
-                controller.map().forEachIndexed { rowInd, row ->
+                drawHexagons(controller.map())
 
-                    row.forEachIndexed { colInd, it ->
-                        hexagon(TILE_HEIGHT, it) {
-                            offsetX = TILE_HEIGHT * 2 * colInd - TILE_HEIGHT * off
-                            offsetY = yOffSet * rowInd
-                        }
-                    }
-                    if (rowInd >= s / 2) off--
-                    else off++
-                }
-                corners.forEach { (k, v) ->
-                    if (k.owner != null) {
-                        when (k.buildingType) {
-                            VILLAGE -> {
-                                village {
-                                    layoutX = v.first - boundsInLocal.maxX
-                                    layoutY = v.second - boundsInLocal.maxY
-                                }
-                            }
+                drawEdges(gameController.map.edges.filter { it.owner != null })
+                drawVillagesAndCities(corners)
 
-                            CITY -> {
-                                city {
-                                    layoutX = v.first - boundsInLocal.maxX
-                                    layoutY = v.second - boundsInLocal.maxY
-                                }
-                            }
 
-                            else -> {}
-                        }
+                when (gameController.state) {
+                    Start -> {
+                        drawCirclesOnCorner(gameController.getGoodCorners(true))
                     }
-                }
-                if (state == 4) {
-                    //Available roads
-                    controller.gameController.map.edges.forEach {
-                        line {
-                            val endpoint = it.endPoints
-                            startX = corners[endpoint.first]!!.first
-                            startY = corners[endpoint.first]!!.second
-                            endX = corners[endpoint.second]!!.first
-                            endY = corners[endpoint.second]!!.second
-                            strokeWidth = 3.0
-                            id = it.id
-                            stroke = RED
-                        }
-                    }
-                }
-                if (state == 5 || state == 6) {
-                    //Available corner locations
-                    print("GOOD CORNERS: ")
-                    gameController.getGoodCorners().forEach {vertex ->
-                        print(vertex)
-                        corners[vertex]!!.let {
-                            if (vertex.owner == null)
-                                circleText(TILE_HEIGHT / 5, vertex.id) {
-                                    setAllId(vertex.id)
-                                    centerX(it.first)
-                                    centerY(it.second)
-                                    circle.fill = WHITE
-                                }
-                        }
-                    }
-                }
 
-                onMouseClicked = EventHandler {
-                    if (it.button == MouseButton.PRIMARY) {
-                        val id = it.pickResult.intersectedNode.id
-                        println("Clicked id: $id $state")
-                        val t = controller.gameController.map.tile(id)
-                        if (t.size == 1) {
-                            val tt = t[0]
-                            tt.vertices.forEach {
-                                println(it)
-                            }
-                        }
-                        if (id.startsWith("E")) {
-                            println("EDGE clicked")
-                            if (state == 4) {
-                                state = 0
-                                controller.buyRoad(id)
-                            }
-                        }
-                        if (id.startsWith("V")) {
-                            if (state == 5) {
-                                state = 0
-                                controller.buyVillage(id)
-                            } else if (state == 6) {
-                                state = 0
-                                controller.buyCity(id)
-                            }
-                        }
+                    StartPlaceRoad -> {
+                        drawEdges(gameController.getRoadPlacementForBeginning(), RED)
                     }
+
+                    BuyRoad -> {
+                        drawEdges(gameController.getGoodRoads(), RED)
+                    }
+
+                    BuyVillage -> {
+                        drawCirclesOnCorner(gameController.getGoodCorners())
+                    }
+
+                    BuyCity -> {
+                        val villages = gameController.getCurrentPlayerVillages().toSet()
+                        highlightVillages(corners.filter {
+                            villages.contains(it.key)
+                        })
+                    }
+
+                    else -> {}
                 }
             }
         }
     }
+
+    private fun refreshPlayerHud() {
+        playerHud.clear()
+        playerHud.apply {
+            add(
+                PlayerUi(
+                    gameController,
+                    { developmentMenu() },
+                    { buyMenu() },
+                    { gameController.passTheTurn() },
+                    { refresh() }
+                )
+            )
+        }
+    }
+
+    private fun refreshOtherPlayerHud() {
+        otherPlayerHud.clear()
+        otherPlayerHud.apply {
+            gameController.otherPlayers().forEach {
+                hgap = 5.0
+                row {
+                    add(OtherPlayerCard(it.value))
+                }
+            }
+        }
+    }
+
+    private fun handleClick(id: String) {
+        when (gameController.state) {
+            BuyCity -> {
+                if (id.startsWith("V")) {
+                    gameController.buyCity(id)
+                }
+                setGameState(Normal)
+            }
+
+            BuyVillage -> {
+                if (id.startsWith("V")) {
+                    gameController.buyVillage(id)
+                }
+                setGameState(Normal)
+            }
+
+            BuyRoad -> {
+                if (id.startsWith("E")) {
+                    gameController.buyEdge(id)
+                }
+                setGameState(Normal)
+            }
+
+            UseKnight, Seven -> {
+                if (id.startsWith("T")) {
+                    val tile = gameController.map.tiles.find { it.id == id } ?: return
+                    if (tile.isBlocked) return
+                    val players = tile.vertices.filter {
+                        it?.owner != null && it.owner != gameController.me
+                    }.mapNotNull { it!!.owner }
+                    if (players.size == 1 || players.isEmpty()) {
+                        //Todo just place
+                    } else {
+                        stealingMenu(players)
+                    }
+                }
+            }
+
+            Start -> {
+                if (id.startsWith("V")) {
+                    gameController.setStartVillage(id)
+                    refresh()
+                }
+            }
+
+            else -> {}
+        }
+    }
+
+    private fun Parent.drawHexagons(map: MutableList<MutableList<Tile>>) {
+        val yOffSet = calculateYOffSetFromHeight(TILE_HEIGHT)
+        val s = map.size
+        var off = s / 2
+        map.forEachIndexed { rowInd, row ->
+            row.forEachIndexed { colInd, it ->
+                hexagon(TILE_HEIGHT, it) {
+                    offsetX = TILE_HEIGHT * 2 * colInd - TILE_HEIGHT * off
+                    offsetY = yOffSet * rowInd
+                }
+            }
+            if (rowInd >= s / 2) off--
+            else off++
+        }
+    }
+
+    private fun Parent.drawVillagesAndCities(corners: HashMap<Vertex, Pair<Double, Double>>) {
+        corners.forEach { (k, v) ->
+            if (k.owner != null) {
+                when (k.buildingType) {
+                    VILLAGE -> {
+                        village {
+                            color = k.owner!!.playerColor.toJavaColor()
+                            layoutX = v.first - boundsInLocal.maxX / 2
+                            layoutY = v.second - boundsInLocal.maxY / 2
+                            oId = k.id
+
+                        }
+                    }
+
+                    CITY -> {
+                        city {
+                            color = k.owner!!.playerColor.toJavaColor()
+                            layoutX = v.first - boundsInLocal.maxX / 2
+                            layoutY = v.second - boundsInLocal.maxY / 2
+                        }
+                    }
+
+                    else -> {}
+                }
+            }
+        }
+    }
+
+    private fun Parent.highlightVillages(corners: Map<Vertex, Pair<Double, Double>>) {
+        corners.forEach { (k, v) ->
+            if (k.owner != null) {
+                when (k.buildingType) {
+                    VILLAGE -> {
+                        village {
+                            isHighlighted = true
+                            color = k.owner!!.playerColor.toJavaColor()
+                            layoutX = v.first - boundsInLocal.maxX / 2
+                            layoutY = v.second - boundsInLocal.maxY / 2
+                            oId = k.id
+                        }
+                    }
+
+                    else -> {}
+                }
+            }
+        }
+    }
+
+    private fun Parent.drawEdges(edges: List<Edge>, overrideColor: Color? = null) {
+        edges.forEach {
+            line {
+                val endpoint = it.endPoints
+                startX = corners[endpoint.first]!!.first
+                startY = corners[endpoint.first]!!.second
+                endX = corners[endpoint.second]!!.first
+                endY = corners[endpoint.second]!!.second
+                strokeWidth = 3.0
+                id = it.id
+                stroke = overrideColor ?: it.owner!!.playerColor.toJavaColor()
+            }
+        }
+    }
+
+    private fun Parent.drawCirclesOnCorner(goodCorners: List<Vertex>) {
+        goodCorners.forEach { vertex ->
+            print(vertex)
+            corners[vertex]!!.let {
+                if (vertex.owner == null)
+                    circleText(TILE_HEIGHT / 5, vertex.id) {
+                        setAllId(vertex.id)
+                        centerX(it.first)
+                        centerY(it.second)
+                        circle.fill = RED
+                        text.text = ""
+                    }
+            }
+        }
+    }
+
 
     override val root = stackpane {
         add(playField)
@@ -172,8 +338,8 @@ class GameView : BaseView() {
     )
 
 
-    fun buyMenu() {
-        state = 1
+    fun developmentMenu() {
+        setGameState(DevelopmentMenu)
         popUp.apply {
             rectangle {
                 width = root.width / 2
@@ -185,7 +351,267 @@ class GameView : BaseView() {
                     hgap = 10.0
                     row {
                         label {
-                            text = "Resources"
+                            text = "Your developments"
+                        }
+                    }
+                    row {
+                        label {
+                            text = "Knights"
+                        }
+                        label {
+                            text = "Year of Plenty"
+                        }
+                        label {
+                            text = "Road Building"
+                        }
+                        label {
+                            text = "Monopoly"
+                        }
+                        label {
+                            text = "1 Point cards"
+                        }
+                    }
+                    row {
+                        with(gameController.me!!) {
+                            listOf(
+                                getKnights(),
+                                getYearOfPlenties(),
+                                getRoadBuildings(),
+                                getMonopolies()
+                            ).forEach {
+                                label {
+                                    text = """ 
+                                    Usable: ${it.count { !it.hasToWait && !it.used }}
+                                    Has to wait: ${it.count { it.hasToWait && !it.used }}
+                                    Used: ${it.count { it.used }}
+                                """.trimIndent()
+                                }
+                            }
+                            label {
+                                var generatedText = ""
+                                listOf(
+                                    University,
+                                    Market,
+                                    Library,
+                                    Chapel,
+                                    GreatHall
+                                ).forEach { type ->
+                                    generatedText += "$type: ${getPointCards().count { it.developmentTypes == type }}\n"
+                                }
+
+                                text = generatedText
+                            }
+                        }
+                    }
+                    row {
+                        with(gameController.me!!) {
+                            button {
+                                val knights = getKnights()
+                                isDisable = knights.count { !it.hasToWait && !it.used } == 0
+                                text = "Use"
+                                action {
+                                    closeMenu()
+                                    setGameState(UseKnight)
+                                }
+                            }
+                            button {
+                                val yearOfPlenties = getYearOfPlenties()
+                                isDisable = yearOfPlenties.count { !it.hasToWait && !it.used } == 0
+                                text = "Use"
+                                action {
+                                    closeMenu()
+                                    yearsOfPlentyMenu()
+
+                                }
+                            }
+                            button {
+                                val roads = getRoadBuildings()
+                                isDisable = roads.count { !it.hasToWait && !it.used } == 0
+                                text = "Use"
+                                action {
+                                    setGameState(UseRoads)
+                                    closeMenu()
+                                }
+                            }
+                            button {
+                                val monopolies = getMonopolies()
+                                isDisable = monopolies.count { !it.hasToWait && !it.used } == 0
+                                text = "Use"
+                                action {
+                                    closeMenu()
+                                    monopolyMenu()
+                                }
+                            }
+                        }
+                    }
+                    row {
+                        button {
+                            text = "Close"
+                            action {
+                                closeMenu()
+                                setGameState(Normal)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        playField.effect = blur
+        root.add(popUp)
+    }
+
+    fun stealingMenu(players: List<Player>) {
+        setGameState(Stealing)
+        popUp.apply {
+            rectangle {
+                width = root.width / 2
+                height = root.height / 2
+                fill = WHITE
+            }
+            group {
+                gridpane {
+                    hgap = 10.0
+                    row {
+                        label {
+                            text = "Choose a player to steal from!"
+                        }
+                    }
+                    players.forEach {
+                        row {
+                            add(OtherPlayerCard(it).apply {
+                                onMouseClicked = EventHandler { event ->
+                                    if (event.button != MouseButton.PRIMARY) return@EventHandler
+                                    //TODO steal from
+                                    println("Stealing from: ${it.username}")
+                                }
+                            })
+                        }
+                    }
+
+                }
+            }
+        }
+        playField.effect = blur
+        root.add(popUp)
+    }
+
+    fun monopolyMenu() {
+        setGameState(UseMonopoly)
+        popUp.apply {
+            rectangle {
+                width = root.width / 2
+                height = root.height / 2
+                fill = WHITE
+            }
+            group {
+                gridpane {
+                    hgap = 10.0
+                    row {
+                        label {
+                            text = "Choose two resources!"
+                        }
+                    }
+                    val resourceBox = combobox<ResourceType> {
+                        items = observableListOf(
+                            *ResourceType.values()
+                        )
+                    }
+                    row {
+                        add(resourceBox)
+                    }
+                    row {
+                        button {
+                            text = "Buy"
+                            action {
+                                closeMenu()
+                                gameController.useMonopoly(resourceBox.value)
+                            }
+                        }
+                        button {
+                            text = "Close"
+                            action {
+                                closeMenu()
+                                setGameState(Normal)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        playField.effect = blur
+        root.add(popUp)
+    }
+
+    fun yearsOfPlentyMenu() {
+        setGameState(UseYearsOfPlenty)
+        popUp.apply {
+            rectangle {
+                width = root.width / 2
+                height = root.height / 2
+                fill = WHITE
+            }
+            group {
+                gridpane {
+                    hgap = 10.0
+                    row {
+                        label {
+                            text = "Choose two resources!"
+                        }
+                    }
+                    val resourceBox1 = combobox<ResourceType> {
+                        items = observableListOf(
+                            *ResourceType.values()
+                        )
+                    }
+                    val resourceBox2 = combobox<ResourceType> {
+                        items = observableListOf(
+                            *ResourceType.values()
+                        )
+                    }
+                    row {
+                        add(resourceBox1)
+                        add(resourceBox2)
+                    }
+                    row {
+                        button {
+                            text = "Buy"
+                            action {
+                                closeMenu()
+                                gameController.useYearsOfPlenty(resourceBox1.value, resourceBox2.value)
+                            }
+                        }
+
+                        button {
+                            text = "Close"
+                            action {
+                                closeMenu()
+                                setGameState(Normal)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        playField.effect = blur
+        root.add(popUp)
+    }
+
+    fun buyMenu() {
+        setGameState(BuyMenu)
+        popUp.apply {
+            rectangle {
+                width = root.width / 2
+                height = root.height / 2
+                fill = WHITE
+            }
+            group {
+                gridpane {
+                    hgap = 10.0
+                    row {
+                        label {
+                            val resourceText =
+                                gameController.me!!.resources.map { "${it.key}: ${it.value}" }.joinToString(", ")
+                            text = "Resources: $resourceText"
                         }
                     }
                     row {
@@ -223,29 +649,38 @@ class GameView : BaseView() {
                         button {
                             text = "Buy"
                             action {
-                                closeBuyMenu()
+                                closeMenu()
                                 buyRoad()
                             }
                         }
                         button {
                             text = "Buy"
                             action {
-                                closeBuyMenu()
+                                closeMenu()
                                 buyVillage()
                             }
                         }
                         button {
                             text = "Buy"
                             action {
-                                closeBuyMenu()
+                                closeMenu()
                                 buyCity()
                             }
                         }
                         button {
                             text = "Buy"
                             action {
-                                closeBuyMenu()
+                                closeMenu()
                                 buyUpgrade()
+                            }
+                        }
+                    }
+                    row {
+                        button {
+                            text = "Close"
+                            action {
+                                closeMenu()
+                                setGameState(Normal)
                             }
                         }
                     }
@@ -256,7 +691,7 @@ class GameView : BaseView() {
         root.add(popUp)
     }
 
-    fun closeBuyMenu() {
+    fun closeMenu() {
         playField.effect = null
         root.clear()
         root.add(playField)
@@ -265,22 +700,30 @@ class GameView : BaseView() {
     }
 
     fun buyRoad() {
-        state = 4
+        setGameState(BuyRoad)
     }
 
     fun buyVillage() {
-        state = 5
+        setGameState(BuyVillage)
     }
 
     fun buyCity() {
-        state = 6
+        setGameState(BuyCity)
     }
 
     fun buyUpgrade() {
-        state = 0
-        return
-        controller.buyUpgrade()
-        state = 0
+        gameController.buyUpgrade()
     }
 
+    private fun setGameState(state: GameState) {
+        gameController.state = state
+        refresh()
+    }
+}
+
+fun PlayerColor.toJavaColor(): Color = when (this) {
+    PlayerColor.RED -> DARKRED
+    PlayerColor.GREEN -> GREEN
+    PlayerColor.BLUE -> BLUE
+    PlayerColor.YELLOW -> YELLOW
 }

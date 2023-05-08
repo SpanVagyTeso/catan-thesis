@@ -12,6 +12,12 @@ class City : GridPane() {
     val walls: Rectangle
     val lhsRoof: Polygon
     val rhsRoof: Rectangle
+
+    var color = Color.RED
+        set(value) {
+            field = value
+            morph()
+        }
     var size: Double = 15.0
         set(value) {
             field = value
@@ -29,6 +35,7 @@ class City : GridPane() {
         clear()
         walls.height = size
         walls.width = size * 2
+
         lhsRoof.points.clear()
         lhsRoof.points.clear()
         lhsRoof.points.addAll(
@@ -41,10 +48,12 @@ class City : GridPane() {
                 -size * 0.65,
             )
         )
-        lhsRoof.fill = Color.RED
+        lhsRoof.fill = color
+        walls.fill = color
+        rhsRoof.fill = color
+
         rhsRoof.width = size / 3
         rhsRoof.height = size * 0.65
-        rhsRoof.fill = Color.GREY
         row {
             hbox {
                 add(lhsRoof)
