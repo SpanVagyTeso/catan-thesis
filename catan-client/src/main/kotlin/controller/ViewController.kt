@@ -4,17 +4,15 @@ import com.catan.sdk.dto.DtoType
 import com.catan.sdk.dto.LOBBY_BASE
 import com.catan.sdk.dto.LOGIN_SUCCESS
 import com.catan.sdk.dto.REGISTER_SUCCES
-import com.catan.sdk.dto.game.GAME
-import com.catan.sdk.dto.game.Game
-import com.catan.sdk.dto.game.STARTUP
-import com.catan.sdk.dto.game.`in`.BuyDto
-import com.catan.sdk.dto.game.`in`.BuyType
+import com.catan.sdk.dto.game.fromclient.BuyDto
+import com.catan.sdk.dto.game.fromclient.BuyType
+import com.catan.sdk.dto.game.fromclient.FromClient
+import com.catan.sdk.dto.game.fromclient.FromClientPayload
 import com.catan.sdk.dto.lobby.*
 import com.catan.sdk.dto.login.LoginDto
 import com.catan.sdk.dto.login.LoginSuccessDto
 import com.catan.sdk.dto.register.RegisterDto
 import com.catan.sdk.toDto
-import gui.views.GameView
 import gui.views.LobbySelectionView
 import gui.views.LobbyView
 import gui.views.LoginView
@@ -58,7 +56,7 @@ class ViewController : Controller() {
         )
     }
 
-    fun startLobby(){
+    fun startLobby() {
         socket.sendDto(
             StartLobbyDto(
                 sessionId,
@@ -104,39 +102,48 @@ class ViewController : Controller() {
         )
     }
 
-    fun buyCity(vertexId: String){
-        socket.sendDto(
+    fun buyCity(vertexId: String) {
+        sendDto(
             BuyDto(
+                BuyType.CITY,
                 vertexId,
-                BuyType.CITY
-
             )
         )
     }
 
-    fun buyVillage(vertexId: String){
-        socket.sendDto(
+    fun buyVillage(vertexId: String) {
+        sendDto(
             BuyDto(
-                vertexId,
                 BuyType.VILLAGE,
+                vertexId,
             )
         )
     }
 
-    fun buyRoad(edgeId: String){
-        socket.sendDto(
+    fun buyRoad(edgeId: String) {
+        sendDto(
             BuyDto(
-                edgeId,
-                BuyType.ROAD
+                BuyType.ROAD,
+                edgeId
             )
         )
     }
 
-    fun buyUpgrade(){
-        socket.sendDto(
+    fun buyUpgrade() {
+        sendDto(
             BuyDto(
-                "",
-                BuyType.UPGRADE
+                BuyType.UPGRADE,
+                ""
+            )
+        )
+
+    }
+
+    private fun sendDto(payload: FromClientPayload) {
+        socket.sendDto(
+            FromClient(
+                sessionId,
+                payload
             )
         )
     }
@@ -159,11 +166,13 @@ class ViewController : Controller() {
                         currentView.replaceWith<LobbySelectionView>()
                     }
                 }
+
                 REGISTER_SUCCES -> {
                     Platform.runLater {
                         currentView.replaceWith<LoginView>()
                     }
                 }
+
                 LOBBY_BASE -> {
                     with(msg.toDto<LobbyBase>()) {
                         when (commandType) {
@@ -173,6 +182,7 @@ class ViewController : Controller() {
                                     refreshCurrentView()
                                 }
                             }
+
                             LOBBY_INFO -> {
                                 currentLobby = msg.toDto()
                                 Platform.runLater {
@@ -183,7 +193,8 @@ class ViewController : Controller() {
                         }
                     }
                 }
-                GAME -> {
+
+                "GAME" -> {
                     gameController.handle(message = msg)
                 }
             }

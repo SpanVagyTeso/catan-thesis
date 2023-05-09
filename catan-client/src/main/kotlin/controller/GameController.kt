@@ -1,8 +1,10 @@
 package controller
 
-import com.catan.sdk.dto.game.Game
-import com.catan.sdk.dto.game.STARTUP
-import com.catan.sdk.dto.game.out.StartupDto
+import com.catan.sdk.dto.game.*
+import com.catan.sdk.dto.game.fromserver.FromServer
+import com.catan.sdk.dto.game.fromserver.FromServerPayloadType
+import com.catan.sdk.dto.game.fromserver.FromServerPayloadType.STARTUP
+import com.catan.sdk.dto.game.fromserver.StartupDto
 import com.catan.sdk.entities.*
 import com.catan.sdk.entities.DevelopmentTypes.Knight
 import com.catan.sdk.entities.Map
@@ -18,17 +20,17 @@ class GameController(
     val players = mutableMapOf<String, Player>()
     var me: Player? = null
     var currentPlayer: Player? = null
-    var state = GameState.OtherPlayer
+    var state = GameState.Normal
         set(value) {
             field = value
             refreshView?.let { it() }
         }
     var chosenVertexAtBeginning: Vertex? = null
-    var refreshView : (() -> Unit)? = null
+    var refreshView: (() -> Unit)? = null
 
     private fun startup(dto: StartupDto) {
         dto.players.forEach {
-            players[it] = Player(it, RED)
+            players[it.userName] = Player(it)
         }
         map.loadFromDto(dto.map)
         map.attachAllTiles()
@@ -39,7 +41,7 @@ class GameController(
     }
 
     fun passTheTurn() {
-
+        //send pass
     }
 
     fun test() {
@@ -92,18 +94,46 @@ class GameController(
                 edges[0].owner = player
 
             }
+            if (it.id == "T5") {
+                it.isBlocked = true
+            }
         }
         map.edges.forEach {
             if (it.id == "E30") {
-                println("alamfa")
                 it.owner = player
             }
         }
     }
 
+    fun canBuyVillage(): Boolean {
+        if (me!!.resources[ResourceType.Wool]!! < 1) return false
+        if (me!!.resources[ResourceType.Grain]!! < 1) return false
+        if (me!!.resources[ResourceType.Brick]!! < 1) return false
+        if (me!!.resources[ResourceType.Lumber]!! < 1) return false
+        return getGoodCorners().isNotEmpty()
+    }
+
+    fun canBuyCity(): Boolean {
+        if (me!!.resources[ResourceType.Ore]!! < 3) return false
+        if (me!!.resources[ResourceType.Grain]!! < 2) return false
+        return getCurrentPlayerVillages().isNotEmpty()
+    }
+
+    fun canBuyRoad(): Boolean {
+        if (me!!.resources[ResourceType.Brick]!! < 1) return false
+        if (me!!.resources[ResourceType.Lumber]!! < 1) return false
+        return getCurrentPlayerVillages().isNotEmpty()
+    }
+
+    fun canBuyDevelopment(): Boolean {
+        if (me!!.resources[ResourceType.Ore]!! < 1) return false
+        if (me!!.resources[ResourceType.Wool]!! < 1) return false
+        return me!!.resources[ResourceType.Grain]!! > 0
+    }
+
     fun handle(message: String) {
-        with(message.toDto<Game>()) {
-            when (gameType) {
+        with(message.toDto<FromServer>()) {
+            when (this.payload.type) {
                 STARTUP -> {
                     startup(message.toDto())
                 }
@@ -129,11 +159,15 @@ class GameController(
     }
 
     fun useYearsOfPlenty(resource1: ResourceType, resource2: ResourceType) {
-
+        YearOfPlentyDto(resource1, resource2)
     }
 
     fun useMonopoly(resource: ResourceType) {
+        MonopolyDto(resource)
+    }
 
+    fun steal(tile: Tile, isKnight: Boolean, fromWho: Player?) {
+        StealDto(tile.id, false, fromWho?.username)
     }
 
     fun setStartVillage(vertexId: String) {
@@ -145,9 +179,6 @@ class GameController(
     }
 
     fun getRoadPlacementForBeginning() = chosenVertexAtBeginning!!.edges
-
-    fun knights() = me!!.cards.filter { it.developmentTypes == Knight }
-
 
     fun otherPlayers() = players.filter { it.key != viewController.username }
 

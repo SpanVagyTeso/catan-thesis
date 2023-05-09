@@ -111,6 +111,13 @@ class GameView : BaseView() {
                 "Place down a road next to the previous village!"
             }
 
+            Seven -> {
+                "Please move the thief"
+            }
+            OtherPlayer -> {
+                "Other player turn"
+            }
+
             else -> {
                 "Your turn"
             }
@@ -214,10 +221,14 @@ class GameView : BaseView() {
                     val players = tile.vertices.filter {
                         it?.owner != null && it.owner != gameController.me
                     }.mapNotNull { it!!.owner }
-                    if (players.size == 1 || players.isEmpty()) {
-                        //Todo just place
+                    if (players.isEmpty()) {
+                        gameController.steal(tile, gameController.state == UseKnight, null)
+                        setGameState(Normal)
+                    } else if (players.size == 1) {
+                        gameController.steal(tile, gameController.state == UseKnight, players.single())
+                        setGameState(Normal)
                     } else {
-                        stealingMenu(players)
+                        stealingMenu(players, tile, gameController.state == UseKnight)
                     }
                 }
             }
@@ -460,7 +471,7 @@ class GameView : BaseView() {
         root.add(popUp)
     }
 
-    fun stealingMenu(players: List<Player>) {
+    fun stealingMenu(players: List<Player>, tile: Tile, isKnight: Boolean) {
         setGameState(Stealing)
         popUp.apply {
             rectangle {
@@ -481,8 +492,9 @@ class GameView : BaseView() {
                             add(OtherPlayerCard(it).apply {
                                 onMouseClicked = EventHandler { event ->
                                     if (event.button != MouseButton.PRIMARY) return@EventHandler
-                                    //TODO steal from
-                                    println("Stealing from: ${it.username}")
+                                    gameController.steal(tile, isKnight, it)
+                                    closeMenu()
+                                    setGameState(Normal)
                                 }
                             })
                         }
@@ -609,69 +621,80 @@ class GameView : BaseView() {
                     hgap = 10.0
                     row {
                         label {
-                            val resourceText =
-                                gameController.me!!.resources.map { "${it.key}: ${it.value}" }.joinToString(", ")
+                            val resourceText = gameController.me!!.resources.map {
+                                "${it.key}: ${it.value}"
+                            }.joinToString(", ")
                             text = "Resources: $resourceText"
                         }
                     }
                     row {
-                        label {
-                            text = "Road"
-                        }
-                        label {
-                            text = "Village"
-                        }
-                        label {
-                            text = "City"
-                        }
-                        label {
-                            text = "Upgrade"
-                        }
-                    }
-                    row {
-                        rectangle {
-                            width = 10.0
-                            height = 10.0
-                        }
-                        village {
-                            size = 25.0
-                        }
-                        city {
-                            size = 25.0
-                        }
-                        rectangle {
-                            width = 10.0
-                            height = 10.0
-                            fill = YELLOW
-                        }
-                    }
-                    row {
-                        button {
-                            text = "Buy"
-                            action {
-                                closeMenu()
-                                buyRoad()
+                        gridpane {
+                            vgap = 5.0
+                            hgap = 5.0
+                            row {
+                                label {
+                                    text = "Road"
+                                }
+                                label {
+                                    text = "Village"
+                                }
+                                label {
+                                    text = "City"
+                                }
+                                label {
+                                    text = "Upgrade"
+                                }
                             }
-                        }
-                        button {
-                            text = "Buy"
-                            action {
-                                closeMenu()
-                                buyVillage()
+                            row {
+                                rectangle {
+                                    width = 10.0
+                                    height = 10.0
+                                }
+                                village {
+                                    size = 25.0
+                                }
+                                city {
+                                    size = 25.0
+                                }
+                                rectangle {
+                                    width = 25.0
+                                    height = 25.0
+                                    fill = YELLOW
+                                }
                             }
-                        }
-                        button {
-                            text = "Buy"
-                            action {
-                                closeMenu()
-                                buyCity()
-                            }
-                        }
-                        button {
-                            text = "Buy"
-                            action {
-                                closeMenu()
-                                buyUpgrade()
+                            row {
+                                button {
+                                    text = "Buy"
+                                    isDisable = !gameController.canBuyRoad()
+                                    action {
+                                        closeMenu()
+                                        buyRoad()
+                                    }
+                                }
+                                button {
+                                    text = "Buy"
+                                    isDisable = !gameController.canBuyVillage()
+                                    action {
+                                        closeMenu()
+                                        buyVillage()
+                                    }
+                                }
+                                button {
+                                    text = "Buy"
+                                    isDisable = !gameController.canBuyCity()
+                                    action {
+                                        closeMenu()
+                                        buyCity()
+                                    }
+                                }
+                                button {
+                                    text = "Buy"
+                                    isDisable = !gameController.canBuyDevelopment()
+                                    action {
+                                        closeMenu()
+                                        buyUpgrade()
+                                    }
+                                }
                             }
                         }
                     }
