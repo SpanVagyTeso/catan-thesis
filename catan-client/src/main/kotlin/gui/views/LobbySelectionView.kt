@@ -126,7 +126,6 @@ class LobbySelectionView : BaseView() {
                     } else {
                         this@toGrid.sessionId!!
                     }
-                    println(selectedId)
                     refresh()
                 }
             }

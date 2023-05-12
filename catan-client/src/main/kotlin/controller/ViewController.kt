@@ -4,14 +4,16 @@ import com.catan.sdk.dto.DtoType
 import com.catan.sdk.dto.LOBBY_BASE
 import com.catan.sdk.dto.LOGIN_SUCCESS
 import com.catan.sdk.dto.REGISTER_SUCCES
-import com.catan.sdk.dto.game.fromclient.BuyDto
-import com.catan.sdk.dto.game.fromclient.BuyType
-import com.catan.sdk.dto.game.fromclient.FromClient
-import com.catan.sdk.dto.game.fromclient.FromClientPayload
+import com.catan.sdk.dto.game.MonopolyDto
+import com.catan.sdk.dto.game.StealDto
+import com.catan.sdk.dto.game.YearOfPlentyDto
+import com.catan.sdk.dto.game.fromclient.*
+import com.catan.sdk.dto.game.fromclient.FromClientPayloadType.Pass
 import com.catan.sdk.dto.lobby.*
 import com.catan.sdk.dto.login.LoginDto
 import com.catan.sdk.dto.login.LoginSuccessDto
 import com.catan.sdk.dto.register.RegisterDto
+import com.catan.sdk.entities.ResourceType
 import com.catan.sdk.toDto
 import gui.views.LobbySelectionView
 import gui.views.LobbyView
@@ -65,6 +67,14 @@ class ViewController : Controller() {
         )
     }
 
+    fun leaveLobby() {
+        socket.sendDto(
+            LeaveLobbyDto(
+                sessionId
+            )
+        )
+    }
+
     fun login(username: String, password: String) {
         socket.sendDto(
             LoginDto(
@@ -102,49 +112,63 @@ class ViewController : Controller() {
         )
     }
 
-    fun buyCity(vertexId: String) {
-        sendDto(
-            BuyDto(
-                BuyType.CITY,
-                vertexId,
-            )
+    fun sendDto(payload: FromClient) {
+        socket.sendDto(
+            payload
         )
     }
 
-    fun buyVillage(vertexId: String) {
-        sendDto(
-            BuyDto(
-                BuyType.VILLAGE,
-                vertexId,
-            )
-        )
-    }
-
-    fun buyRoad(edgeId: String) {
-        sendDto(
-            BuyDto(
-                BuyType.ROAD,
-                edgeId
-            )
-        )
-    }
-
-    fun buyUpgrade() {
-        sendDto(
-            BuyDto(
-                BuyType.UPGRADE,
-                ""
-            )
-        )
-
-    }
-
-    private fun sendDto(payload: FromClientPayload) {
+    fun sendPass() {
         socket.sendDto(
             FromClient(
                 sessionId,
-                payload
+                Pass
             )
+        )
+    }
+
+    fun sendBuy(type: BuyType, id: String? = null) {
+        socket.sendDto(
+            BuyDto(
+                sessionId,
+                type,
+                id
+            )
+        )
+    }
+
+    fun sendYearOfPlenty(res1: ResourceType, res2: ResourceType) {
+        socket.sendDto(
+            YearOfPlentyDto(
+                sessionId,
+                res1,
+                res2
+            )
+        )
+    }
+
+    fun sendMonopoly(res: ResourceType) {
+        socket.sendDto(
+            MonopolyDto(
+                sessionId,
+                res
+            )
+        )
+    }
+
+    fun sendBeginning(edgeId: String, tileId: String) {
+        socket.sendDto(
+            PlaceBeginningDto(
+                sessionId,
+                edgeId,
+                tileId
+            )
+        )
+    }
+
+    fun sendSteal(id: String, isKnight: Boolean, fromWho: String?) {
+        socket.sendDto(
+            StealDto(sessionId, id, false, fromWho)
         )
     }
 
@@ -156,9 +180,8 @@ class ViewController : Controller() {
     }
 
     private fun socketMessageHandler(msg: String) {
+        println("RECEIVED: ${msg}")
         with(msg.toDto<DtoType>()) {
-            println(type)
-            println(msg)
             when (type) {
                 LOGIN_SUCCESS -> {
                     sessionId = msg.toDto<LoginSuccessDto>().sessionId
@@ -195,7 +218,11 @@ class ViewController : Controller() {
                 }
 
                 "GAME" -> {
-                    gameController.handle(message = msg)
+                    gameController.handle(msg)
+                }
+
+                else -> {
+                    println("Unhandled dto: ${type}")
                 }
             }
         }

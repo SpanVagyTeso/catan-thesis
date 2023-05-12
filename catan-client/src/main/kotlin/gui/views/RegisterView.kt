@@ -1,6 +1,7 @@
 package gui.views
 
 import controller.ViewController
+import gui.MainView
 import javafx.application.Platform
 import tornadofx.*
 
@@ -31,6 +32,14 @@ class RegisterView: BaseView() {
                 controller.register(username.text, password.text)
                 Platform.runLater{
                     replaceWith<LoginView>()
+                }
+            }
+        }
+        button {
+            text = "Back to main menu"
+            action {
+                runLater {
+                    controller.currentView.replaceWith<MainView>()
                 }
             }
         }

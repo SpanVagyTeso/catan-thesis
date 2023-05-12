@@ -1,6 +1,7 @@
 package gui.views
 
 import controller.ViewController
+import gui.MainView
 import javafx.geometry.Pos
 import tornadofx.*
 
@@ -22,9 +23,17 @@ class LoginView: BaseView() {
             maxWidth=200.0
         }
         button {
-            text = "Press me"
+            text = "Login"
             action{
                 controller.login(username.text, password.text)
+            }
+        }
+        button {
+            text = "Back to main menu"
+            action {
+                runLater {
+                    controller.currentView.replaceWith<MainView>()
+                }
             }
         }
     }

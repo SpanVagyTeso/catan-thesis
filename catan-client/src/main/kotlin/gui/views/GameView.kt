@@ -60,16 +60,18 @@ class GameView : BaseView() {
     val popUp = stackpane()
 
     init {
-        gameController.test()
+//        gameController.test()
         gameController.refreshView = { refresh() }
         refresh()
     }
 
     override fun refresh() {
-        refreshMapHud()
-        refreshPlayerHud()
-        refreshOtherPlayerHud()
-        refreshCurrentAction()
+        runLater {
+            refreshMapHud()
+            refreshPlayerHud()
+            refreshOtherPlayerHud()
+            refreshCurrentAction()
+        }
     }
 
     private fun refreshCurrentAction() {
@@ -114,8 +116,9 @@ class GameView : BaseView() {
             Seven -> {
                 "Please move the thief"
             }
+
             OtherPlayer -> {
-                "Other player turn"
+                "Other player's turn"
             }
 
             else -> {
@@ -239,6 +242,12 @@ class GameView : BaseView() {
                     refresh()
                 }
             }
+            StartPlaceRoad -> {
+                if (id.startsWith("E")) {
+                    gameController.sendStartVillageAndRoad(id)
+                    refresh()
+                }
+            }
 
             else -> {}
         }
@@ -325,7 +334,6 @@ class GameView : BaseView() {
 
     private fun Parent.drawCirclesOnCorner(goodCorners: List<Vertex>) {
         goodCorners.forEach { vertex ->
-            print(vertex)
             corners[vertex]!!.let {
                 if (vertex.owner == null)
                     circleText(TILE_HEIGHT / 5, vertex.id) {
@@ -736,6 +744,7 @@ class GameView : BaseView() {
 
     fun buyUpgrade() {
         gameController.buyUpgrade()
+        setGameState(Normal)
     }
 
     private fun setGameState(state: GameState) {

@@ -27,29 +27,30 @@ class SocketController {
 
                 receiveChannel = socket.openReadChannel()
                 sendChannel = socket.openWriteChannel(autoFlush = true)
-                launch(Dispatchers.IO) {
-                    while (true) {
-                        val receivedMessage = receiveChannel.readUTF8Line()
-                        if (receivedMessage != null) {
-                            launch { handler(receivedMessage) }
 
-                        } else {
-                            println("Server closed a connection")
-                            socket.close()
-                            selectorManager.close()
-                            exitProcess(0)
-                        }
+                while (true) {
+                    val receivedMessage = receiveChannel.readUTF8Line()
+                    if (receivedMessage != null) {
+                        launch { handler(receivedMessage) }
+
+                    } else {
+                        println("Server closed a connection")
+                        socket.close()
+                        selectorManager.close()
+                        exitProcess(0)
                     }
                 }
-            }
-        } catch (_: Exception) {
 
+            }
+        } catch (e: Exception) {
+            println(e.printStackTrace())
         }
     }
 
     fun sendDto(dto: DtoType) {
         runBlocking {
             launch(Dispatchers.IO) {
+                println("Sending: ${dto.toJson()}")
                 sendChannel.writeStringUtf8("${dto.toJson()}\n")
             }
         }

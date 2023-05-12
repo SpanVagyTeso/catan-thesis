@@ -1,15 +1,17 @@
 package controller
 
 import com.catan.sdk.dto.game.*
-import com.catan.sdk.dto.game.fromserver.FromServer
-import com.catan.sdk.dto.game.fromserver.FromServerPayloadType
-import com.catan.sdk.dto.game.fromserver.FromServerPayloadType.STARTUP
-import com.catan.sdk.dto.game.fromserver.StartupDto
+import com.catan.sdk.dto.game.fromclient.*
+import com.catan.sdk.dto.game.fromclient.FromClientPayloadType.Pass
+import com.catan.sdk.dto.game.fromserver.*
+import com.catan.sdk.dto.game.fromserver.ChangeType.*
+import com.catan.sdk.dto.game.fromserver.FromServerPayloadType.*
 import com.catan.sdk.entities.*
 import com.catan.sdk.entities.DevelopmentTypes.Knight
 import com.catan.sdk.entities.Map
 import com.catan.sdk.entities.PlayerColor.*
 import com.catan.sdk.toDto
+import controller.GameState.*
 import gui.views.GameView
 import javafx.application.Platform
 
@@ -20,7 +22,8 @@ class GameController(
     val players = mutableMapOf<String, Player>()
     var me: Player? = null
     var currentPlayer: Player? = null
-    var state = GameState.Normal
+    var dices = 0 to 0
+    var state = Start
         set(value) {
             field = value
             refreshView?.let { it() }
@@ -29,11 +32,16 @@ class GameController(
     var refreshView: (() -> Unit)? = null
 
     private fun startup(dto: StartupDto) {
+        println("STARTING")
         dto.players.forEach {
             players[it.userName] = Player(it)
         }
         map.loadFromDto(dto.map)
         map.attachAllTiles()
+        currentPlayer = players[dto.startingPlayer]!!
+        me = players[viewController.username]!!
+
+        println("STARTING FOR REAL")
         Platform.runLater {
             viewController.currentView.replaceWith<GameView>()
             viewController.refreshCurrentView()
@@ -41,7 +49,7 @@ class GameController(
     }
 
     fun passTheTurn() {
-        //send pass
+        viewController.sendPass()
     }
 
     fun test() {
@@ -132,42 +140,139 @@ class GameController(
     }
 
     fun handle(message: String) {
+        println("Incoming message: $message")
         with(message.toDto<FromServer>()) {
-            when (this.payload.type) {
+            println("TYPE: $payloadType")
+            println(message)
+            when (payloadType) {
                 STARTUP -> {
                     startup(message.toDto())
                 }
+                CHANGEONBOARD -> {
+                    changeOnBoard(message.toDto())
+                }
+                DICES -> {
+                    println("ANYAD3")
+                    newDices(message.toDto())
+                }
+                RESOURCES -> resourceChange(message.toDto())
+                SEVEN -> sevenRolled()
+                CURRENTPLAYER -> newCurrentPlayer(message.toDto())
             }
+        }
+
+    }
+
+    private fun changeOnBoard(dto: ChangeOnBoardDto) {
+        when (dto.changeType) {
+            ROAD -> {
+                map.edges.find { it.id == dto.id }!!.owner = players[dto.username]!!
+            }
+
+            CITY -> {
+                map.vertexes.find { it.id == dto.id }!!.let {
+                    it.buildingType = BuildType.CITY
+                }
+
+            }
+
+            VILLAGE -> {
+                map.vertexes.find { it.id == dto.id }!!.let {
+                    it.buildingType = BuildType.VILLAGE
+                    it.owner = players[dto.username]!!
+                }
+            }
+
+            REMOVEBLOCK -> {
+                map.tiles.find {
+                    it.id == dto.id
+                }!!.isBlocked = false
+            }
+
+            ADDBLOCK -> {
+                map.tiles.find {
+                    it.id == dto.id
+                }!!.isBlocked = true
+            }
+        }
+        refreshView!!()
+    }
+
+    private fun newDices(newDices: DiceRollDto) {
+        dices = newDices.dice1 to newDices.dice2
+        refreshView!!()
+    }
+
+    private fun resourceChange(dto: ResourcesDto) {
+        dto.players.forEach {
+            players[it.userName]!!.refreshFromDto(it)
         }
     }
 
+    private fun sevenRolled() {
+        state = Seven
+        refreshView!!()
+    }
+
+    private fun newCurrentPlayer(dto: CurrentPlayerDto) {
+        currentPlayer = players[dto.userName]!!
+        state = if (currentPlayer != me) {
+            if (dto.isStarted) {
+                OtherPlayer
+            } else {
+                StartOther
+            }
+        } else {
+            if (dto.isStarted) {
+                Normal
+            } else {
+                Start
+            }
+        }
+        refreshView!!()
+        println("done")
+    }
+
     fun buyCity(vertexId: String) {
-        viewController.buyCity(vertexId)
+        viewController.sendBuy(
+            BuyType.CITY,
+            vertexId
+        )
     }
 
     fun buyVillage(vertexId: String) {
-        viewController.buyVillage(vertexId)
+        viewController.sendBuy(
+            BuyType.VILLAGE,
+            vertexId
+
+        )
 
     }
 
     fun buyEdge(edgeId: String) {
-        viewController.buyRoad(edgeId)
+        viewController.sendBuy(
+            BuyType.ROAD,
+            edgeId
+
+        )
     }
 
     fun buyUpgrade() {
-        viewController.buyUpgrade()
+        viewController.sendBuy(
+            BuyType.UPGRADE
+        )
     }
 
     fun useYearsOfPlenty(resource1: ResourceType, resource2: ResourceType) {
-        YearOfPlentyDto(resource1, resource2)
+        viewController.sendYearOfPlenty(resource1, resource2)
     }
 
     fun useMonopoly(resource: ResourceType) {
-        MonopolyDto(resource)
+        viewController.sendMonopoly(resource)
     }
 
     fun steal(tile: Tile, isKnight: Boolean, fromWho: Player?) {
-        StealDto(tile.id, false, fromWho?.username)
+        viewController.sendSteal(tile.id, false, fromWho?.username)
     }
 
     fun setStartVillage(vertexId: String) {
@@ -175,7 +280,21 @@ class GameController(
         chosenVertexAtBeginning = v
         v.owner = me
         v.buildingType = BuildType.VILLAGE
-        state = GameState.StartPlaceRoad
+        state = StartPlaceRoad
+    }
+
+    fun sendStartVillageAndRoad(edgeId: String) {
+        val edge = chosenVertexAtBeginning!!.edges.find { it.id == edgeId }
+        if(edge == null) {
+            chosenVertexAtBeginning = null
+            state = Start
+            refreshView!!()
+            return
+        }
+        chosenVertexAtBeginning!!.owner = null
+        chosenVertexAtBeginning!!.buildingType = null
+        viewController.sendBeginning(edgeId, chosenVertexAtBeginning!!.id)
+        state = Start
     }
 
     fun getRoadPlacementForBeginning() = chosenVertexAtBeginning!!.edges
