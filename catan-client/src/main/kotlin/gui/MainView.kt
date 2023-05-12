@@ -43,15 +43,15 @@ class MainView : View(title = "Catan") {
                 }
             }
         }
-        left = OtherPlayerCard(Player("almafa", PlayerColor.RED)).apply {
-            morph()
-        }
-
     }
 
     override fun onDock() {
         super.onDock()
         controller.currentView = this
+        currentWindow?.let {
+            it.height = 768.0
+            it.width = 1028.0
+        }
     }
 }
 

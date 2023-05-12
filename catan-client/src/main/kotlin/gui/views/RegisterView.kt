@@ -2,6 +2,7 @@ package gui.views
 
 import gui.MainView
 import javafx.application.Platform
+import javafx.geometry.Pos
 import tornadofx.*
 
 class RegisterView : BaseView() {
@@ -9,7 +10,7 @@ class RegisterView : BaseView() {
         println("register")
     }
 
-    override val root = vbox {
+    override val root = vbox(alignment = Pos.CENTER) {
         println("register root")
         setPrefSize(400.0, 200.0)
 

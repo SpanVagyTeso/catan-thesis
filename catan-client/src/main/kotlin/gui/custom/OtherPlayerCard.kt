@@ -41,6 +41,18 @@ class OtherPlayerCard(val player: Player) : GridPane() {
                 text = "Knights: ${player.activeDevelopments.count { it.developmentTypes == Knight }}"
             }
         }
+        row {
+            if(player.ownerOfMostKnights){
+                label {
+                    text = "Most Knight(+2 Point)"
+                }
+            }
+            if(player.ownerOfLongestRoad){
+                label {
+                    text = "Longest road(+2 Point)"
+                }
+            }
+        }
         vgrow = Priority.NEVER
 
     }

@@ -27,13 +27,13 @@ class GameView : BaseView() {
     val mapHud = stackpane()
     val otherPlayerHud = gridpane()
     val playerHud = gridpane()
-    val currentAction = stackpane()
+    val miscellaneousHud = hbox()
 
     val playField = borderpane {
         bottom = playerHud
         center = mapHud
         right = otherPlayerHud
-        top = currentAction
+        top = miscellaneousHud
 
         onKeyPressed = EventHandler {
             if (it.code == KeyCode.ESCAPE) {
@@ -70,15 +70,20 @@ class GameView : BaseView() {
             refreshMapHud()
             refreshPlayerHud()
             refreshOtherPlayerHud()
-            refreshCurrentAction()
+            refreshMiscellaneousHud()
         }
     }
 
-    private fun refreshCurrentAction() {
-        currentAction.clear()
-        currentAction.apply {
+    private fun refreshMiscellaneousHud() {
+        miscellaneousHud.clear()
+        miscellaneousHud.apply {
             label {
                 text = currentActionText() + " ${gameController.state}"
+            }
+            if(gameController.state !in setOf(Start, StartOther, StartPlaceRoad)){
+                label{
+                    text = "Rolled dice: ${gameController.dices.first}, ${gameController.dices.second}"
+                }
             }
         }
     }
@@ -655,20 +660,27 @@ class GameView : BaseView() {
                                 }
                             }
                             row {
+                                val myColor = gameController.me!!.playerColor.toJavaColor()
                                 rectangle {
                                     width = 10.0
                                     height = 10.0
+                                    fill = myColor
                                 }
                                 village {
                                     size = 25.0
+                                    color = myColor
                                 }
                                 city {
                                     size = 25.0
+                                    color = myColor
                                 }
-                                rectangle {
-                                    width = 25.0
-                                    height = 25.0
-                                    fill = YELLOW
+                                vbox {
+                                    label {
+                                        text = "Remaining:"
+                                    }
+                                    label {
+                                        text = gameController.remainingDevelopmentCards.toString()
+                                    }
                                 }
                             }
                             row {

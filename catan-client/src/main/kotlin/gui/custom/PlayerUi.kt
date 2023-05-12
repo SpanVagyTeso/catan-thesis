@@ -21,8 +21,19 @@ class PlayerUi(
     fun morph() {
         clear()
         row {
+            hgap = 5.0
             label {
                 text = gameController.me!!.username
+            }
+            if(gameController.me!!.ownerOfMostKnights){
+                label {
+                    text = "Owner of most Knight(+2 Point)"
+                }
+            }
+            if(gameController.me!!.ownerOfLongestRoad){
+                label {
+                    text = "Owner of longest road(+2 Point)"
+                }
             }
         }
         row {

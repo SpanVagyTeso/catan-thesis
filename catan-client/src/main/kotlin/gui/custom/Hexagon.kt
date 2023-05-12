@@ -8,6 +8,8 @@ import javafx.scene.Parent
 import javafx.scene.paint.Color
 import javafx.scene.shape.Polygon
 import tornadofx.attachTo
+import tornadofx.hide
+import tornadofx.show
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -81,9 +83,14 @@ class Hexagon(
 
             corners[tile.vertices[i]!!] = x to y
         }
-        rolledNumberCircle.centerX(-offsetX)
-        rolledNumberCircle.centerY(-offsetY)
-        rolledNumberCircle.circle.fill = if (tile.isBlocked) Color.BLACK else Color.WHITE
+        if (tile.type != DESERT || tile.isBlocked) {
+            rolledNumberCircle.show()
+            rolledNumberCircle.centerX(-offsetX)
+            rolledNumberCircle.centerY(-offsetY)
+            rolledNumberCircle.circle.fill = if (tile.isBlocked) Color.BLACK else Color.WHITE
+        } else {
+            rolledNumberCircle.hide()
+        }
     }
 }
 
