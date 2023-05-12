@@ -28,6 +28,7 @@ class GameController(
         }
     var chosenVertexAtBeginning: Vertex? = null
     var refreshView: (() -> Unit)? = null
+    var remainingDevelopmentCards = 0
 
     private fun startup(dto: StartupDto) {
         println("STARTING")
@@ -152,19 +153,24 @@ class GameController(
                 }
 
                 DICES -> {
-                    println("ANYAD3")
                     newDices(message.toDto())
                 }
 
                 RESOURCES -> resourceChange(message.toDto())
                 SEVEN -> sevenRolled()
                 CURRENTPLAYER -> newCurrentPlayer(message.toDto())
+                DEVELOPMENTCARDSREMAINING -> remainingDevCards(message.toDto())
             }
         }
 
     }
 
-    private fun changeOnBoard(dto: ChangeOnBoardDto) {
+    private fun remainingDevCards(dto: DevelopmentCardsRemainingDto) {
+        remainingDevelopmentCards = dto.remaining
+        refreshView!!()
+    }
+
+    fun changeOnBoard(dto: ChangeOnBoardDto) {
         when (dto.changeType) {
             ROAD -> {
                 map.edges.find { it.id == dto.id }!!.owner = players[dto.username]!!

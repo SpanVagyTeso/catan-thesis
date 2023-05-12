@@ -23,7 +23,7 @@ class CircleText(
     }
 
     init {
-        text.boundsType = VISUAL;
+        text.boundsType = VISUAL
         add(circle)
         add(text)
 
