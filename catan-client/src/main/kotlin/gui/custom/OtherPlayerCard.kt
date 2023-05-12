@@ -3,7 +3,8 @@ package gui.custom
 import com.catan.sdk.entities.DevelopmentTypes.Knight
 import com.catan.sdk.entities.Player
 import gui.views.toJavaColor
-import javafx.scene.layout.*
+import javafx.scene.layout.GridPane
+import javafx.scene.layout.Priority
 import tornadofx.*
 
 class OtherPlayerCard(val player: Player) : GridPane() {
@@ -12,6 +13,7 @@ class OtherPlayerCard(val player: Player) : GridPane() {
         morph()
         style = "-fx-border-color: black"
     }
+
     fun morph() {
         clear()
         row {

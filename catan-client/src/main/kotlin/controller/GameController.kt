@@ -1,8 +1,6 @@
 package controller
 
-import com.catan.sdk.dto.game.*
-import com.catan.sdk.dto.game.fromclient.*
-import com.catan.sdk.dto.game.fromclient.FromClientPayloadType.Pass
+import com.catan.sdk.dto.game.fromclient.BuyType
 import com.catan.sdk.dto.game.fromserver.*
 import com.catan.sdk.dto.game.fromserver.ChangeType.*
 import com.catan.sdk.dto.game.fromserver.FromServerPayloadType.*
@@ -148,13 +146,16 @@ class GameController(
                 STARTUP -> {
                     startup(message.toDto())
                 }
+
                 CHANGEONBOARD -> {
                     changeOnBoard(message.toDto())
                 }
+
                 DICES -> {
                     println("ANYAD3")
                     newDices(message.toDto())
                 }
+
                 RESOURCES -> resourceChange(message.toDto())
                 SEVEN -> sevenRolled()
                 CURRENTPLAYER -> newCurrentPlayer(message.toDto())
@@ -285,7 +286,7 @@ class GameController(
 
     fun sendStartVillageAndRoad(edgeId: String) {
         val edge = chosenVertexAtBeginning!!.edges.find { it.id == edgeId }
-        if(edge == null) {
+        if (edge == null) {
             chosenVertexAtBeginning = null
             state = Start
             refreshView!!()

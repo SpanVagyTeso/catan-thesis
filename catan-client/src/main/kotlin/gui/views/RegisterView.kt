@@ -1,36 +1,35 @@
 package gui.views
 
-import controller.ViewController
 import gui.MainView
 import javafx.application.Platform
 import tornadofx.*
 
-class RegisterView: BaseView() {
+class RegisterView : BaseView() {
     init {
         println("register")
     }
 
     override val root = vbox {
         println("register root")
-        setPrefSize(400.0,200.0)
+        setPrefSize(400.0, 200.0)
 
         label {
             text = "Username"
         }
         val username = textfield {
-            maxWidth=200.0
+            maxWidth = 200.0
         }
-        label{
+        label {
             text = "Password"
         }
         val password = passwordfield {
-            maxWidth=200.0
+            maxWidth = 200.0
         }
         button {
             text = "Register"
-            action{
+            action {
                 controller.register(username.text, password.text)
-                Platform.runLater{
+                Platform.runLater {
                     replaceWith<LoginView>()
                 }
             }

@@ -2,11 +2,8 @@ package gui.custom
 
 import javafx.geometry.Pos
 import javafx.scene.Parent
-import javafx.scene.layout.GridPane
 import javafx.scene.layout.StackPane
 import javafx.scene.paint.Color
-import javafx.scene.paint.Paint
-import javafx.scene.shape.Circle
 import javafx.scene.shape.Polygon
 import javafx.scene.shape.Rectangle
 import tornadofx.*
@@ -31,7 +28,7 @@ class Village : StackPane() {
             field = value
             morph()
         }
-    var color : Color? = Color.BLACK
+    var color: Color? = Color.BLACK
 
     init {
         walls = Rectangle(size, size)

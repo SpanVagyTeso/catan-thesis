@@ -18,7 +18,7 @@ repositories {
     mavenCentral()
 }
 
-javafx{
+javafx {
     modules("javafx.base", "javafx.graphics", "javafx.controls")
 }
 
@@ -46,8 +46,8 @@ application {
     mainClass.set("MainKt")
 }
 
-java{
-    toolchain{
+java {
+    toolchain {
         languageVersion.set(JavaLanguageVersion.of(17))
     }
 }

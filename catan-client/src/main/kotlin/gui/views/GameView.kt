@@ -1,7 +1,8 @@
 package gui.views
 
 import com.catan.sdk.entities.*
-import com.catan.sdk.entities.BuildType.*
+import com.catan.sdk.entities.BuildType.CITY
+import com.catan.sdk.entities.BuildType.VILLAGE
 import com.catan.sdk.entities.DevelopmentTypes.*
 import controller.GameState
 import controller.GameState.*
@@ -60,7 +61,6 @@ class GameView : BaseView() {
     val popUp = stackpane()
 
     init {
-//        gameController.test()
         gameController.refreshView = { refresh() }
         refresh()
     }
@@ -242,6 +242,7 @@ class GameView : BaseView() {
                     refresh()
                 }
             }
+
             StartPlaceRoad -> {
                 if (id.startsWith("E")) {
                     gameController.sendStartVillageAndRoad(id)

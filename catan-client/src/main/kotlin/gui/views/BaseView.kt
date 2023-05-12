@@ -1,9 +1,9 @@
 package gui.views
 
 import controller.ViewController
-import tornadofx.*
+import tornadofx.View
 
-abstract class BaseView: View(title = "Catan") {
+abstract class BaseView : View(title = "Catan") {
     protected val controller: ViewController by inject()
 
     abstract fun refresh()

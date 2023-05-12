@@ -1,5 +1,3 @@
-import kotlinx.coroutines.Job
-
 group = "com.catan"
 version = "1.0-SNAPSHOT"
 

@@ -1,6 +1,5 @@
 package gui.views
 
-import com.catan.sdk.toJson
 import tornadofx.*
 
 class LobbyView : BaseView() {

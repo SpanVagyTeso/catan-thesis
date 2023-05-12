@@ -1,9 +1,6 @@
 package controller
 
 import com.catan.sdk.dto.DtoType
-import com.catan.sdk.dto.lobby.*
-import com.catan.sdk.dto.login.LoginDto
-import com.catan.sdk.dto.register.RegisterDto
 import com.catan.sdk.toJson
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*

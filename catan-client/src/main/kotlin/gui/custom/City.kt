@@ -1,6 +1,5 @@
 package gui.custom
 
-import javafx.geometry.VPos
 import javafx.scene.Parent
 import javafx.scene.layout.GridPane
 import javafx.scene.paint.Color

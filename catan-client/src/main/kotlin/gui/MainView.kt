@@ -4,7 +4,6 @@ import com.catan.sdk.entities.Player
 import com.catan.sdk.entities.PlayerColor
 import controller.ViewController
 import gui.custom.OtherPlayerCard
-import gui.views.GameView
 import gui.views.LoginView
 import gui.views.RegisterView
 import javafx.application.Platform
@@ -43,17 +42,8 @@ class MainView : View(title = "Catan") {
                     }
                 }
             }
-            button {
-                text = "Test"
-                action {
-                    Platform.runLater {
-                        replaceWith<GameView>()
-                    }
-                }
-            }
-
         }
-        left = OtherPlayerCard(Player("almafa", PlayerColor.RED)).apply{
+        left = OtherPlayerCard(Player("almafa", PlayerColor.RED)).apply {
             morph()
         }
 
