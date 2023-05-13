@@ -145,6 +145,7 @@ class GameView : BaseView() {
 
                 when (gameController.state) {
                     Start -> {
+                        if(gameController.currentPlayer == gameController.me)
                         drawCirclesOnCorner(gameController.getGoodCorners(true))
                     }
 

@@ -62,7 +62,7 @@ class Hexagon(
     private fun morphHexagon() {
         polygon.fill = when (tile.type) {
             FOREST -> Color.DARKGREEN
-            PASTURE -> Color.GREEN
+            PASTURE -> Color.LIGHTGREEN
             MOUNTAINS -> Color.GREY
             HILLS -> Color.ORANGE
             FIELDS -> Color.YELLOW
