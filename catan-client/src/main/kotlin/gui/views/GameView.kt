@@ -62,6 +62,7 @@ class GameView : BaseView() {
 
     init {
         gameController.refreshView = { refresh() }
+        gameController.showWinners = { showWinners() }
         refresh()
     }
 
@@ -80,8 +81,8 @@ class GameView : BaseView() {
             label {
                 text = currentActionText() + " ${gameController.state}"
             }
-            if(gameController.state !in setOf(Start, StartOther, StartPlaceRoad)){
-                label{
+            if (gameController.state !in setOf(Start, StartOther, StartPlaceRoad)) {
+                label {
                     text = "Rolled dice: ${gameController.dices.first}, ${gameController.dices.second}"
                 }
             }
@@ -148,11 +149,11 @@ class GameView : BaseView() {
                     }
 
                     StartPlaceRoad -> {
-                        drawEdges(gameController.getRoadPlacementForBeginning(), RED)
+                        drawEdges(gameController.getRoadPlacementForBeginning(), RED, 6.0)
                     }
 
                     BuyRoad -> {
-                        drawEdges(gameController.getGoodRoads(), RED)
+                        drawEdges(gameController.getGoodRoads(), RED, 6.0)
                     }
 
                     BuyVillage -> {
@@ -323,15 +324,16 @@ class GameView : BaseView() {
         }
     }
 
-    private fun Parent.drawEdges(edges: List<Edge>, overrideColor: Color? = null) {
+    private fun Parent.drawEdges(edges: List<Edge>, overrideColor: Color? = null, width: Double = 3.0) {
         edges.forEach {
             line {
                 val endpoint = it.endPoints
+                println("endpoints: ${endpoint.first.id}, ${endpoint.first.id}")
                 startX = corners[endpoint.first]!!.first
                 startY = corners[endpoint.first]!!.second
                 endX = corners[endpoint.second]!!.first
                 endY = corners[endpoint.second]!!.second
-                strokeWidth = 3.0
+                strokeWidth = width
                 id = it.id
                 stroke = overrideColor ?: it.owner!!.playerColor.toJavaColor()
             }
@@ -362,6 +364,52 @@ class GameView : BaseView() {
         (height / cos(Math.PI / 60) * 2).pow(2.0) - (height.pow(2.0))
     )
 
+    fun showWinners() {
+        runLater {
+            popUp.apply {
+                rectangle {
+                    width = root.width / 2
+                    height = root.height / 2
+                    fill = WHITE
+                }
+                group {
+                    gridpane {
+                        hgap = 10.0
+                        row {
+                            label {
+                                text = "Game ended!"
+                            }
+                        }
+                        row {
+                            if (gameController.winners.size == 1) {
+                                label {
+                                    text = "${gameController.winners.single().username} won!"
+                                }
+                            } else {
+                                var winners = gameController.winners.joinToString(", ") { it.username }
+                                label {
+                                    text = "$winners are the winners!"
+                                }
+                            }
+                        }
+                        row {
+                            button {
+                                text = "Back to Lobbies!"
+                                action {
+                                    closeMenu()
+                                    runLater {
+                                        controller.currentView.replaceWith<LobbySelectionView>()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            playField.effect = blur
+            root.add(popUp)
+        }
+    }
 
     fun developmentMenu() {
         setGameState(DevelopmentMenu)

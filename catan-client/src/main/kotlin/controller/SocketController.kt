@@ -40,7 +40,7 @@ class SocketController {
 
             }
         } catch (e: Exception) {
-            println(e.printStackTrace())
+            e.printStackTrace()
         }
     }
 

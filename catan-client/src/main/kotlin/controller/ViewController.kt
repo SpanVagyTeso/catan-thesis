@@ -171,7 +171,7 @@ class ViewController : Controller() {
 
     fun sendSteal(id: String, isKnight: Boolean, fromWho: String?) {
         socket.sendDto(
-            StealDto(sessionId, id, false, fromWho)
+            StealDto(sessionId, id, isKnight, fromWho)
         )
     }
 

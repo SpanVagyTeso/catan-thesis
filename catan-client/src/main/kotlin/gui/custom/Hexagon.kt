@@ -63,10 +63,10 @@ class Hexagon(
         polygon.fill = when (tile.type) {
             FOREST -> Color.DARKGREEN
             PASTURE -> Color.GREEN
-            MOUNTAINS -> Color.ORANGE
-            HILLS -> Color.LIGHTGREEN
-            FIELDS -> Color.LIGHTYELLOW
-            DESERT -> Color.YELLOW
+            MOUNTAINS -> Color.GREY
+            HILLS -> Color.ORANGE
+            FIELDS -> Color.YELLOW
+            DESERT -> Color.LIGHTYELLOW
             OCEAN -> Color.BLUE
         }
 

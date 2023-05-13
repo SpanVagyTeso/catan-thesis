@@ -10,6 +10,7 @@ import com.catan.sdk.entities.Map
 import com.catan.sdk.entities.PlayerColor.*
 import com.catan.sdk.toDto
 import controller.GameState.*
+import gui.custom.corners
 import gui.views.GameView
 import javafx.application.Platform
 
@@ -28,10 +29,11 @@ class GameController(
         }
     var chosenVertexAtBeginning: Vertex? = null
     var refreshView: (() -> Unit)? = null
+    var showWinners: (() -> Unit)? = null
     var remainingDevelopmentCards = 0
+    var winners = mutableListOf<Player>()
 
     private fun startup(dto: StartupDto) {
-        println("STARTING")
         dto.players.forEach {
             players[it.userName] = Player(it)
         }
@@ -39,7 +41,8 @@ class GameController(
         map.attachAllTiles()
         currentPlayer = players[dto.startingPlayer]!!
         me = players[viewController.username]!!
-
+        state = Start
+        corners.clear()
         println("STARTING FOR REAL")
         Platform.runLater {
             viewController.currentView.replaceWith<GameView>()
@@ -160,6 +163,7 @@ class GameController(
                 SEVEN -> sevenRolled()
                 CURRENTPLAYER -> newCurrentPlayer(message.toDto())
                 DEVELOPMENTCARDSREMAINING -> remainingDevCards(message.toDto())
+                WINNERS -> gameIsWon(message.toDto())
             }
         }
 
@@ -168,6 +172,14 @@ class GameController(
     private fun remainingDevCards(dto: DevelopmentCardsRemainingDto) {
         remainingDevelopmentCards = dto.remaining
         refreshView!!()
+    }
+
+    private fun gameIsWon(winnersDto: WinnersDto) {
+        state = GameEnd
+        winnersDto.winners.forEach {
+            winners.add(players[it]!!)
+        }
+        showWinners!!()
     }
 
     fun changeOnBoard(dto: ChangeOnBoardDto) {
@@ -279,7 +291,7 @@ class GameController(
     }
 
     fun steal(tile: Tile, isKnight: Boolean, fromWho: Player?) {
-        viewController.sendSteal(tile.id, false, fromWho?.username)
+        viewController.sendSteal(tile.id, isKnight, fromWho?.username)
     }
 
     fun setStartVillage(vertexId: String) {
@@ -334,5 +346,6 @@ enum class GameState {
     BuyMenu,
     DevelopmentMenu,
     Stealing,
-    Seven
+    Seven,
+    GameEnd
 }
