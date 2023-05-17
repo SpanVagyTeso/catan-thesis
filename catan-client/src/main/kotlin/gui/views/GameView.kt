@@ -4,6 +4,7 @@ import com.catan.sdk.entities.*
 import com.catan.sdk.entities.BuildType.CITY
 import com.catan.sdk.entities.BuildType.VILLAGE
 import com.catan.sdk.entities.DevelopmentTypes.*
+import com.catan.sdk.entities.TradeType.*
 import controller.GameState
 import controller.GameState.*
 import gui.custom.*
@@ -52,7 +53,6 @@ class GameView : BaseView() {
                 handleClick(id)
             }
         }
-
     }
 
 
@@ -63,6 +63,7 @@ class GameView : BaseView() {
     init {
         gameController.refreshView = { refresh() }
         gameController.showWinners = { showWinners() }
+        gameController.gameAbrubtlyEnded = { gameAbrubtlyEnds() }
         refresh()
     }
 
@@ -145,15 +146,15 @@ class GameView : BaseView() {
 
                 when (gameController.state) {
                     Start -> {
-                        if(gameController.currentPlayer == gameController.me)
-                        drawCirclesOnCorner(gameController.getGoodCorners(true))
+                        if (gameController.currentPlayer == gameController.me)
+                            drawCirclesOnCorner(gameController.getGoodCorners(true))
                     }
 
                     StartPlaceRoad -> {
                         drawEdges(gameController.getRoadPlacementForBeginning(), RED, 6.0)
                     }
 
-                    BuyRoad -> {
+                    BuyRoad, UseRoads -> {
                         drawEdges(gameController.getGoodRoads(), RED, 6.0)
                     }
 
@@ -222,6 +223,12 @@ class GameView : BaseView() {
                     gameController.buyEdge(id)
                 }
                 setGameState(Normal)
+            }
+
+            UseRoads -> {
+                if(id.startsWith("E")) {
+                    gameController.consumeTwoRoads(id)
+                }
             }
 
             UseKnight, Seven -> {
@@ -329,7 +336,6 @@ class GameView : BaseView() {
         edges.forEach {
             line {
                 val endpoint = it.endPoints
-                println("endpoints: ${endpoint.first.id}, ${endpoint.first.id}")
                 startX = corners[endpoint.first]!!.first
                 startY = corners[endpoint.first]!!.second
                 endX = corners[endpoint.second]!!.first
@@ -391,6 +397,46 @@ class GameView : BaseView() {
                                 label {
                                     text = "$winners are the winners!"
                                 }
+                            }
+                        }
+                        row {
+                            button {
+                                text = "Back to Lobbies!"
+                                action {
+                                    closeMenu()
+                                    runLater {
+                                        controller.currentView.replaceWith<LobbySelectionView>()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            playField.effect = blur
+            root.add(popUp)
+        }
+    }
+
+    fun gameAbrubtlyEnds() {
+        runLater {
+            popUp.apply {
+                rectangle {
+                    width = root.width / 2
+                    height = root.height / 2
+                    fill = WHITE
+                }
+                group {
+                    gridpane {
+                        hgap = 10.0
+                        row {
+                            label {
+                                text = "Game ended!"
+                            }
+                        }
+                        row {
+                            label {
+                                text = "Game ended! Somone left!"
                             }
                         }
                         row {
@@ -784,6 +830,103 @@ class GameView : BaseView() {
         root.add(popUp)
     }
 
+    fun maritimeTradeMenu() {
+        setGameState(MaritimeTradeMenu)
+        popUp.apply {
+            rectangle {
+                width = root.width / 2
+                height = root.height / 2
+                fill = WHITE
+            }
+            group {
+                gridpane {
+                    hgap = 10.0
+                    row {
+                        label {
+                            val resourceText = gameController.me!!.resources.map {
+                                "${it.key}: ${it.value}"
+                            }.joinToString(", ")
+                            text = "Resources: $resourceText"
+                        }
+                    }
+                    val resourceBox1 = combobox<ResourceType> {
+                        items = observableListOf(
+                            *ResourceType.values()
+                        )
+                    }
+                    val resourceBox2 = combobox<ResourceType> {
+                        items = observableListOf(
+                            *ResourceType.values()
+                        )
+                    }
+                    row {
+                        hgap = 5.0
+
+                        row {
+                            add(resourceBox1)
+                            add(resourceBox2)
+                        }
+                    }
+
+                    val options = gameController.getMaritimeTradOptions()
+                    row {
+                        if (options[ThreeToOne] == false) {
+                            button {
+                                text = "Four to One"
+                                action {
+                                    gameController.maritimeTrade(
+                                        resourceBox1.value, resourceBox2.value, FourToOne
+                                    )
+                                }
+                            }
+                        } else {
+                            button {
+                                text = "Three to One"
+                                action {
+                                    gameController.maritimeTrade(
+                                        resourceBox1.value, resourceBox2.value, ThreeToOne
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    row {
+                        label {
+                            text = "Two to ones"
+                        }
+                    }
+                    row {
+                        options.forEach {
+                            if (it.key != ThreeToOne) {
+                                isDisable = it.value
+                                button {
+                                    text = it.key.toResourceName()
+                                    action {
+                                        gameController.maritimeTrade(
+                                            resourceBox1.value, resourceBox2.value, it.key
+                                        )
+                                    }
+                                }
+
+                            }
+                        }
+                    }
+                    row {
+                        button {
+                            text = "Close"
+                            action {
+                                closeMenu()
+                                setGameState(Normal)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        playField.effect = blur
+        root.add(popUp)
+    }
+
     fun closeMenu() {
         playField.effect = null
         root.clear()
@@ -813,6 +956,15 @@ class GameView : BaseView() {
         gameController.state = state
         refresh()
     }
+}
+
+fun TradeType.toResourceName() : String = when(this) {
+    TwoToOneWood -> "Lumber"
+    TwoToOneSheep -> "Wool"
+    TwoToOneBrick -> "Brick"
+    TwoToOneOre -> "Ore"
+    TwoToOneWheat -> "Grain"
+    else -> "any"
 }
 
 fun PlayerColor.toJavaColor(): Color = when (this) {

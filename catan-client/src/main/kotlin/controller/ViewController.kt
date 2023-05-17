@@ -6,17 +6,16 @@ import com.catan.sdk.dto.LOGIN_SUCCESS
 import com.catan.sdk.dto.REGISTER_SUCCES
 import com.catan.sdk.dto.game.MonopolyDto
 import com.catan.sdk.dto.game.StealDto
+import com.catan.sdk.dto.game.TwoRoadDto
 import com.catan.sdk.dto.game.YearOfPlentyDto
-import com.catan.sdk.dto.game.fromclient.BuyDto
-import com.catan.sdk.dto.game.fromclient.BuyType
-import com.catan.sdk.dto.game.fromclient.FromClient
+import com.catan.sdk.dto.game.fromclient.*
 import com.catan.sdk.dto.game.fromclient.FromClientPayloadType.Pass
-import com.catan.sdk.dto.game.fromclient.PlaceBeginningDto
 import com.catan.sdk.dto.lobby.*
 import com.catan.sdk.dto.login.LoginDto
 import com.catan.sdk.dto.login.LoginSuccessDto
 import com.catan.sdk.dto.register.RegisterDto
 import com.catan.sdk.entities.ResourceType
+import com.catan.sdk.entities.TradeType
 import com.catan.sdk.toDto
 import gui.views.LobbySelectionView
 import gui.views.LobbyView
@@ -126,6 +125,27 @@ class ViewController : Controller() {
             FromClient(
                 sessionId,
                 Pass
+            )
+        )
+    }
+
+    fun sendMaritimeTrade(res1: ResourceType, res2: ResourceType, tradeType: TradeType) {
+        socket.sendDto(
+            MaritimeTradeDto(
+                sessionId,
+                res1,
+                res2,
+                tradeType
+            )
+        )
+    }
+
+    fun sendTwoRoad(edgeId1: String, edgeId2: String) {
+        socket.sendDto(
+            TwoRoadDto(
+                sessionId,
+                edgeId1,
+                edgeId2
             )
         )
     }

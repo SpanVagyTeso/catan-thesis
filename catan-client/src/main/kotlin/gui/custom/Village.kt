@@ -28,7 +28,11 @@ class Village : StackPane() {
             field = value
             morph()
         }
-    var color: Color? = Color.BLACK
+    var color: Color = Color.BLACK
+        set(value) {
+            field = value
+            morph()
+        }
 
     init {
         walls = Rectangle(size, size)

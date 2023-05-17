@@ -28,8 +28,10 @@ class GameController(
             refreshView?.let { it() }
         }
     var chosenVertexAtBeginning: Vertex? = null
+    var firstOfTwoRoad: Edge? = null
     var refreshView: (() -> Unit)? = null
     var showWinners: (() -> Unit)? = null
+    var gameAbrubtlyEnded: (() -> Unit)? = null
     var remainingDevelopmentCards = 0
     var winners = mutableListOf<Player>()
 
@@ -164,6 +166,7 @@ class GameController(
                 CURRENTPLAYER -> newCurrentPlayer(message.toDto())
                 DEVELOPMENTCARDSREMAINING -> remainingDevCards(message.toDto())
                 WINNERS -> gameIsWon(message.toDto())
+                SOMEONELEFT -> someoneLeft()
             }
         }
 
@@ -180,6 +183,11 @@ class GameController(
             winners.add(players[it]!!)
         }
         showWinners!!()
+    }
+
+    private fun someoneLeft() {
+        state = GameEnd
+        gameAbrubtlyEnded!!()
     }
 
     fun changeOnBoard(dto: ChangeOnBoardDto) {
@@ -276,6 +284,26 @@ class GameController(
         )
     }
 
+    fun getMaritimeTradOptions(): kotlin.collections.Map<TradeType, Boolean> {
+        val ownedVertexes = map.vertexes.filter {
+            it.owner == me
+        }
+        val options = mutableMapOf<TradeType, Boolean>()
+        ownedVertexes.forEach {
+            if (it.tradeType != TradeType.FourToOne)
+                options[it.tradeType] = true
+        }
+        return options
+    }
+
+    fun maritimeTrade(resource1: ResourceType, resource2: ResourceType, tradeType: TradeType) {
+        viewController.sendMaritimeTrade(
+            resource1,
+            resource2,
+            tradeType
+        )
+    }
+
     fun buyUpgrade() {
         viewController.sendBuy(
             BuyType.UPGRADE
@@ -323,7 +351,24 @@ class GameController(
     fun getGoodCorners(ignoreRoad: Boolean = false) =
         map.getBuyableVertexes(players[viewController.username]!!, ignoreRoad)
 
-    fun getGoodRoads() = map.getBuyableEdges(players[viewController.username]!!)
+    fun getGoodRoads(): List<Edge> {
+        if(state == UseRoads) {
+            if(firstOfTwoRoad != null) {
+                return map.getBuyableEdges(players[viewController.username]!!) + firstOfTwoRoad!!
+            }
+        }
+        return map.getBuyableEdges(players[viewController.username]!!)
+    }
+
+    fun consumeTwoRoads(edgeId: String) {
+        if(firstOfTwoRoad == null) {
+            firstOfTwoRoad = map.edges.find{it.id == edgeId} ?: return
+        }
+        else {
+            viewController.sendTwoRoad(firstOfTwoRoad!!.id, (map.edges.find{it.id == edgeId}?: return).id)
+            firstOfTwoRoad = null
+        }
+    }
 
     fun getCurrentPlayerVillages() = map.vertexes.filter {
         it.owner == players[viewController.username] && it.buildingType == BuildType.VILLAGE
@@ -344,6 +389,7 @@ enum class GameState {
     UseYearsOfPlenty,
     UseMonopoly,
     BuyMenu,
+    MaritimeTradeMenu,
     DevelopmentMenu,
     Stealing,
     Seven,
