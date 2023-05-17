@@ -1,0 +1,128 @@
+package service
+
+import com.catan.sdk.dto.lobby.*
+import com.catan.sdk.toDto
+import com.catan.sdk.toJson
+import error.InvalidLobbyId
+import error.InvalidSessionId
+import error.NotOwner
+import game.Lobby
+import socket.SocketConnection
+import kotlin.random.Random
+
+class LobbyService(
+    private val sessionService: SessionService,
+    private val gameService: GameService
+) {
+    //LobbyId to Lobby
+    val lobbies = mutableMapOf<String, Lobby>()
+
+    fun closedSocket(username: String){
+        lobbies.values.forEach {
+            it.leave(username)
+        }
+    }
+
+    suspend fun handleCommand(message: String, socket: SocketConnection) {
+        val dto: LobbyBase = message.toDto()
+        if (!sessionService.validateSessionId(dto.sessionId!!)) {
+            throw InvalidSessionId()
+        }
+        when (dto.commandType) {
+            CREATE -> {
+                val response = createLobby(message)
+                socket.sendMessage(response.toJson())
+            }
+
+            JOIN -> {
+                val response = joinLobby(message)
+                socket.sendMessage(response.toJson())
+            }
+
+            REFRESH -> {
+                val response = getAvailableLobbies()
+                socket.sendMessage(response.toJson())
+            }
+
+            GET_AVAILABLE_LOBBIES -> {
+                val response = getAvailableLobbies()
+                socket.sendMessage(response.toJson())
+            }
+
+            START -> {
+                startLobby(message)
+            }
+
+            LEAVE -> {
+                leaveLobby(message)
+            }
+
+            else -> {
+                LobbyBase("true", "")
+            }
+        }
+    }
+
+    private fun leaveLobby(msg: String) {
+        with(msg.toDto<StartLobbyDto>()) {
+            val lobby = lobbies[lobbyId]!!
+            lobby.leave(sessionService.getUserFromSessionId(this.sessionId!!)!!)
+        }
+    }
+
+    private fun startLobby(msg: String) {
+        with(msg.toDto<StartLobbyDto>()) {
+            val lobby = lobbies[lobbyId]!!
+            if (
+                !lobby.isOwner(sessionService.getUserFromSessionId(sessionId!!)!!)
+            ) throw NotOwner()
+            lobby.start()
+        }
+    }
+
+    private fun getAvailableLobbies(): AvailableLobbiesDto {
+        return AvailableLobbiesDto(
+            arrayOf(
+                *lobbies.values.map {
+                    it.toDto()
+                }.toTypedArray()
+            )
+        )
+    }
+
+    private fun joinLobby(message: String): LobbyBase {
+        with(message.toDto<JoinLobbyDto>()) {
+            if (lobbies.keys.contains(lobbyId)) {
+                lobbies[lobbyId]!!.join(
+                    sessionService.getUserFromSessionId(sessionId!!)!!
+                )
+            } else {
+                throw InvalidLobbyId()
+            }
+            return lobbies[lobbyId]!!.toDto()
+        }
+    }
+
+    private fun createLobby(message: String): LobbyBase {
+        val dto: CreateLobbyDto = message.toDto()
+
+        val lobby = Lobby(
+            createLobbyId().toString(),
+            dto.size,
+            sessionService.getUserFromSessionId(dto.sessionId!!)!!,
+            dto.name,
+            sessionService,
+            gameService
+        )
+        lobbies[lobby.lobbyId] = lobby
+        return lobby.toDto()
+    }
+
+    private fun createLobbyId(): Int {
+        var rn: Int
+        do {
+            rn = Random.nextInt(100000, 1000000)
+        } while (lobbies.containsKey(rn.toString()))
+        return rn
+    }
+}
