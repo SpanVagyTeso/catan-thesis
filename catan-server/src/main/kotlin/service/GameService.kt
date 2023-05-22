@@ -6,8 +6,8 @@ import com.catan.sdk.entities.Player
 import com.catan.sdk.entities.PlayerColor
 import com.catan.sdk.toDto
 import game.Game
-import game.GameState
-import game.GameState.*
+import game.GameState.Ended
+import game.GameState.Won
 
 class GameService(
     private val sessionService: SessionService,
@@ -31,11 +31,17 @@ class GameService(
     fun socketClosed(userName: String) {
         allGames.forEach {
             it.playerLeft(userName)
+            if (it.gameState == Ended) {
+                allGames.remove(it)
+            }
         }
     }
 
     private fun handlePayload(game: Game, userName: String, message: String) {
-        if (game.currentPlayer.username != userName) return
+        if (game.currentPlayer.username != userName) {
+            if (message.toDto<FromClient>().payloadType != AcceptTrade) return
+            game.acceptOffer(message.toDto(), userName)
+        }
         println("Payload Type: ${message.toDto<FromClient>().payloadType}")
         when (message.toDto<FromClient>().payloadType) {
             Monopoly -> game.useMonopoly(message.toDto())
@@ -46,12 +52,16 @@ class GameService(
             PlaceBeginning -> game.placeAtBeginning(message.toDto())
             TwoRoad -> game.useTwoRoad(message.toDto())
             Trade -> game.maritimeTrade(message.toDto())
+            PlayerTrade -> game.handleTradeOffer(message.toDto())
+            AcceptTrade -> {
+                println("Invalid State, current player cannot accept trades")
+            }
         }
         game.calculatePoints()
-        if(game.gameState == Won) {
+        if (game.gameState == Won) {
             allGames.remove(game)
             game.afterGameStatistics()
-        } else if(game.gameState == Ended){
+        } else if (game.gameState == Ended) {
             allGames.remove(game)
         }
     }

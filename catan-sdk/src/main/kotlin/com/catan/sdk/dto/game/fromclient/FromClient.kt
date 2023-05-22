@@ -17,5 +17,7 @@ enum class FromClientPayloadType {
     TwoRoad,
     Pass,
     PlaceBeginning,
-    Trade
+    Trade,
+    PlayerTrade,
+    AcceptTrade
 }

@@ -2,12 +2,14 @@ package controller
 
 import com.catan.sdk.dto.DtoType
 import com.catan.sdk.toJson
+import io.ktor.http.ContentDisposition.Companion.File
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.io.File
 import kotlin.system.exitProcess
 
 class SocketController {
@@ -17,10 +19,22 @@ class SocketController {
     lateinit var handler: (String) -> Unit
 
     fun run() {
+        println(File(".").canonicalPath)
+        val a = File("build/resources/clientConfig.txt")
+        var hostname = ""
+        var port = 0
+        a.readLines()
+        a.forEachLine {
+            if(it.startsWith("hostname=")){
+                hostname = it.removePrefix("hostname=")
+            } else if (it.startsWith("port=")){
+                port = it.removePrefix("port=").toInt()
+            }
+        }
         val selectorManager = SelectorManager(Dispatchers.IO)
         try {
             runBlocking {
-                socket = aSocket(selectorManager).tcp().connect("localhost", 8000)
+                socket = aSocket(selectorManager).tcp().connect(hostname, port)
 
                 receiveChannel = socket.openReadChannel()
                 sendChannel = socket.openWriteChannel(autoFlush = true)

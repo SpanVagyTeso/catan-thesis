@@ -5,9 +5,7 @@ import com.catan.sdk.dto.game.fromserver.*
 import com.catan.sdk.dto.game.fromserver.ChangeType.*
 import com.catan.sdk.dto.game.fromserver.FromServerPayloadType.*
 import com.catan.sdk.entities.*
-import com.catan.sdk.entities.DevelopmentTypes.Knight
 import com.catan.sdk.entities.Map
-import com.catan.sdk.entities.PlayerColor.*
 import com.catan.sdk.toDto
 import controller.GameState.*
 import gui.custom.corners
@@ -34,6 +32,8 @@ class GameController(
     var gameAbrubtlyEnded: (() -> Unit)? = null
     var remainingDevelopmentCards = 0
     var winners = mutableListOf<Player>()
+    var offers = mutableListOf<PlayerTradeOfferDto>()
+    var developmentPlayed = false
 
     private fun startup(dto: StartupDto) {
         dto.players.forEach {
@@ -54,70 +54,10 @@ class GameController(
 
     fun passTheTurn() {
         viewController.sendPass()
+        developmentPlayed = false
     }
 
-    fun test() {
-        map.generateTiles()
-        map.attachAllTiles()
-        var counter = 0
-        val player = Player(viewController.username, RED)
-        currentPlayer = player
-        player.cards.add(DevelopmentCard(Knight, false))
-        viewController.username = player.username
-        val player1 = Player(viewController.username + "1", GREEN)
-        val player2 = Player(viewController.username + "2", BLUE)
-        me = player
-
-        players[viewController.username] = player
-        players[player1.username] = player1
-        players[player2.username] = player2
-        map.tiles.forEach {
-            it.rolledNumber = counter % 11 + 2
-            counter++
-            it.type = FieldType.values()[counter % FieldType.values().size]
-            it.vertices.find {
-                it?.id == "V0"
-            }?.apply {
-                owner = player
-                buildingType = BuildType.VILLAGE
-                edges[0].owner = player
-            }
-            it.vertices.find {
-                it?.id == "V1"
-            }?.apply {
-                owner = player
-                buildingType = BuildType.CITY
-                edges[0].owner = player
-
-            }
-            it.vertices.find {
-                it?.id == "V2"
-            }?.apply {
-                owner = player1
-                buildingType = BuildType.CITY
-                edges[0].owner = player
-
-            }
-            it.vertices.find {
-                it?.id == "V3"
-            }?.apply {
-                owner = player2
-                buildingType = BuildType.CITY
-                edges[0].owner = player
-
-            }
-            if (it.id == "T5") {
-                it.isBlocked = true
-            }
-        }
-        map.edges.forEach {
-            if (it.id == "E30") {
-                it.owner = player
-            }
-        }
-    }
-
-    fun canBuyVillage(): Boolean {
+    fun canBuySettlement(): Boolean {
         if (me!!.resources[ResourceType.Wool]!! < 1) return false
         if (me!!.resources[ResourceType.Grain]!! < 1) return false
         if (me!!.resources[ResourceType.Brick]!! < 1) return false
@@ -128,13 +68,13 @@ class GameController(
     fun canBuyCity(): Boolean {
         if (me!!.resources[ResourceType.Ore]!! < 3) return false
         if (me!!.resources[ResourceType.Grain]!! < 2) return false
-        return getCurrentPlayerVillages().isNotEmpty()
+        return getCurrentPlayerSettlements().isNotEmpty()
     }
 
     fun canBuyRoad(): Boolean {
         if (me!!.resources[ResourceType.Brick]!! < 1) return false
         if (me!!.resources[ResourceType.Lumber]!! < 1) return false
-        return getCurrentPlayerVillages().isNotEmpty()
+        return getGoodRoads().isNotEmpty()
     }
 
     fun canBuyDevelopment(): Boolean {
@@ -167,9 +107,18 @@ class GameController(
                 DEVELOPMENTCARDSREMAINING -> remainingDevCards(message.toDto())
                 WINNERS -> gameIsWon(message.toDto())
                 SOMEONELEFT -> someoneLeft()
+                TRADEOFFER -> handleOffers(message.toDto())
             }
         }
 
+    }
+
+    private fun handleOffers(dto: PlayerTradeOffersDto) {
+        offers.clear()
+        dto.offers.forEach {
+            offers.add(it)
+        }
+        refreshView!!()
     }
 
     private fun remainingDevCards(dto: DevelopmentCardsRemainingDto) {
@@ -190,6 +139,26 @@ class GameController(
         gameAbrubtlyEnded!!()
     }
 
+    fun offerTrade(
+        myResource: ResourceType,
+        amount: Int,
+        toResource: ResourceType,
+        toAmount: Int,
+        toWho: String
+    ) {
+        if (me!!.resources[myResource]!! < amount) return
+        viewController.sendTradeOffer(
+            myResource,
+            amount,
+            toResource,
+            toAmount,
+            toWho
+        )
+    }
+    fun acceptTrade(id: Int){
+        viewController.acceptTrade(id)
+    }
+
     fun changeOnBoard(dto: ChangeOnBoardDto) {
         when (dto.changeType) {
             ROAD -> {
@@ -203,9 +172,9 @@ class GameController(
 
             }
 
-            VILLAGE -> {
+            SETTLEMENT -> {
                 map.vertexes.find { it.id == dto.id }!!.let {
-                    it.buildingType = BuildType.VILLAGE
+                    it.buildingType = BuildType.SETTLEMENT
                     it.owner = players[dto.username]!!
                 }
             }
@@ -234,6 +203,7 @@ class GameController(
         dto.players.forEach {
             players[it.userName]!!.refreshFromDto(it)
         }
+        refreshView!!()
     }
 
     private fun sevenRolled() {
@@ -257,7 +227,7 @@ class GameController(
             }
         }
         refreshView!!()
-        println("done")
+        developmentPlayed = false
     }
 
     fun buyCity(vertexId: String) {
@@ -267,11 +237,10 @@ class GameController(
         )
     }
 
-    fun buyVillage(vertexId: String) {
+    fun buySettlement(vertexId: String) {
         viewController.sendBuy(
-            BuyType.VILLAGE,
+            BuyType.SETTLEMENT,
             vertexId
-
         )
 
     }
@@ -282,18 +251,6 @@ class GameController(
             edgeId
 
         )
-    }
-
-    fun getMaritimeTradOptions(): kotlin.collections.Map<TradeType, Boolean> {
-        val ownedVertexes = map.vertexes.filter {
-            it.owner == me
-        }
-        val options = mutableMapOf<TradeType, Boolean>()
-        ownedVertexes.forEach {
-            if (it.tradeType != TradeType.FourToOne)
-                options[it.tradeType] = true
-        }
-        return options
     }
 
     fun maritimeTrade(resource1: ResourceType, resource2: ResourceType, tradeType: TradeType) {
@@ -312,25 +269,28 @@ class GameController(
 
     fun useYearsOfPlenty(resource1: ResourceType, resource2: ResourceType) {
         viewController.sendYearOfPlenty(resource1, resource2)
+        developmentPlayed = true
     }
 
     fun useMonopoly(resource: ResourceType) {
         viewController.sendMonopoly(resource)
+        developmentPlayed = true
     }
 
     fun steal(tile: Tile, isKnight: Boolean, fromWho: Player?) {
         viewController.sendSteal(tile.id, isKnight, fromWho?.username)
+        developmentPlayed = isKnight
     }
 
-    fun setStartVillage(vertexId: String) {
+    fun setStartSettlement(vertexId: String) {
         val v = map.vertexes.find { it.id == vertexId } ?: return
         chosenVertexAtBeginning = v
         v.owner = me
-        v.buildingType = BuildType.VILLAGE
+        v.buildingType = BuildType.SETTLEMENT
         state = StartPlaceRoad
     }
 
-    fun sendStartVillageAndRoad(edgeId: String) {
+    fun sendStartSettlementAndRoad(edgeId: String) {
         val edge = chosenVertexAtBeginning!!.edges.find { it.id == edgeId }
         if (edge == null) {
             chosenVertexAtBeginning = null
@@ -351,27 +311,28 @@ class GameController(
     fun getGoodCorners(ignoreRoad: Boolean = false) =
         map.getBuyableVertexes(players[viewController.username]!!, ignoreRoad)
 
-    fun getGoodRoads(): List<Edge> {
-        if(state == UseRoads) {
-            if(firstOfTwoRoad != null) {
-                return map.getBuyableEdges(players[viewController.username]!!) + firstOfTwoRoad!!
-            }
-        }
-        return map.getBuyableEdges(players[viewController.username]!!)
-    }
+    fun getGoodRoads(): List<Edge> = map.getBuyableEdges(players[viewController.username]!!)
+
 
     fun consumeTwoRoads(edgeId: String) {
-        if(firstOfTwoRoad == null) {
-            firstOfTwoRoad = map.edges.find{it.id == edgeId} ?: return
-        }
-        else {
-            viewController.sendTwoRoad(firstOfTwoRoad!!.id, (map.edges.find{it.id == edgeId}?: return).id)
+        if (firstOfTwoRoad == null) {
+            firstOfTwoRoad = map.edges.find { it.id == edgeId } ?: return
+            firstOfTwoRoad!!.owner = me
+        } else {
+            viewController.sendTwoRoad(firstOfTwoRoad!!.id, (map.edges.find { it.id == edgeId } ?: return).id)
             firstOfTwoRoad = null
+            state = Normal
+            developmentPlayed = true
         }
+        refreshView!!()
     }
 
-    fun getCurrentPlayerVillages() = map.vertexes.filter {
-        it.owner == players[viewController.username] && it.buildingType == BuildType.VILLAGE
+    fun getCurrentPlayerSettlements() = map.vertexes.filter {
+        it.owner == players[viewController.username] && it.buildingType == BuildType.SETTLEMENT
+    }
+
+    fun getCurrentPlayerVertexes() = map.vertexes.filter {
+        it.owner == players[viewController.username] && (it.buildingType == BuildType.SETTLEMENT || it.buildingType == BuildType.CITY)
     }
 }
 
@@ -382,7 +343,7 @@ enum class GameState {
     StartOther,
     BuyCity,
     BuyRoad,
-    BuyVillage,
+    BuySettlement,
     Normal,
     UseKnight,
     UseRoads,

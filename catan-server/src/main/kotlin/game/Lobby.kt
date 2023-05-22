@@ -13,12 +13,12 @@ import service.SessionService
 class Lobby(
     val lobbyId: String,
     private val size: Int,
-    private val owner: String,
+    private var owner: String,
     private val lobbyName: String,
     private val sessionService: SessionService,
     private val gameService: GameService
 ) {
-    private var isStarted = false
+    var isStarted = false
 
     private val players = mutableListOf<String>()
     lateinit var game: Game
@@ -74,7 +74,10 @@ class Lobby(
         players.removeIf {
             it == username
         }
+        refreshLobby()
     }
+
+    fun isEmpty() = players.isEmpty()
 
     fun toDto(): LobbyDto {
         return LobbyDto(

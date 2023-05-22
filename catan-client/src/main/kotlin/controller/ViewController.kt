@@ -1,19 +1,15 @@
 package controller
 
-import com.catan.sdk.dto.DtoType
-import com.catan.sdk.dto.LOBBY_BASE
-import com.catan.sdk.dto.LOGIN_SUCCESS
-import com.catan.sdk.dto.REGISTER_SUCCES
-import com.catan.sdk.dto.game.MonopolyDto
-import com.catan.sdk.dto.game.StealDto
-import com.catan.sdk.dto.game.TwoRoadDto
-import com.catan.sdk.dto.game.YearOfPlentyDto
+import com.catan.sdk.dto.*
+import com.catan.sdk.dto.game.*
 import com.catan.sdk.dto.game.fromclient.*
 import com.catan.sdk.dto.game.fromclient.FromClientPayloadType.Pass
 import com.catan.sdk.dto.lobby.*
 import com.catan.sdk.dto.login.LoginDto
 import com.catan.sdk.dto.login.LoginSuccessDto
 import com.catan.sdk.dto.register.RegisterDto
+import com.catan.sdk.dto.stats.GetStatsDto
+import com.catan.sdk.dto.stats.StatsDto
 import com.catan.sdk.entities.ResourceType
 import com.catan.sdk.entities.TradeType
 import com.catan.sdk.toDto
@@ -34,6 +30,7 @@ class ViewController : Controller() {
     var lobbies = mutableListOf<LobbyDto>()
     lateinit var currentLobby: LobbyDto
     val gameController = GameController(this)
+    var stats: StatsDto? = null
 
     private val socketThread: Thread = thread(
         start = false,
@@ -72,7 +69,8 @@ class ViewController : Controller() {
     fun leaveLobby() {
         socket.sendDto(
             LeaveLobbyDto(
-                sessionId
+                sessionId,
+                currentLobby.sessionId!!
             )
         )
     }
@@ -85,6 +83,14 @@ class ViewController : Controller() {
             )
         )
         this.username = username
+    }
+
+    fun getStats(username: String) {
+        socket.sendDto(
+            GetStatsDto(
+                username
+            )
+        )
     }
 
     fun joinLobby(lobbyId: String) {
@@ -150,6 +156,34 @@ class ViewController : Controller() {
         )
     }
 
+    fun sendTradeOffer(
+        myResource: ResourceType,
+        amount: Int,
+        toResource: ResourceType,
+        toAmount: Int,
+        toWho: String
+    ) {
+        socket.sendDto(
+            PlayerTradeDto(
+                sessionId,
+                toWho,
+                myResource,
+                amount,
+                toResource,
+                toAmount,
+            )
+        )
+    }
+
+    fun acceptTrade(id: Int) {
+        socket.sendDto(
+            AcceptTrade(
+                sessionId,
+                id
+            )
+        )
+    }
+
     fun sendBuy(type: BuyType, id: String? = null) {
         socket.sendDto(
             BuyDto(
@@ -202,6 +236,31 @@ class ViewController : Controller() {
         }
     }
 
+    private fun handleStats(statsDto: StatsDto) {
+        stats = statsDto
+        Platform.runLater {
+            refreshCurrentView()
+        }
+
+    }
+
+    private fun lobbyInfo(msg: String) {
+        currentLobby = msg.toDto()
+        if (currentLobby.users.contains(currentLobby.ownerUser)) {
+            Platform.runLater {
+                currentView.replaceWith<LobbyView>()
+                refreshCurrentView()
+            }
+        } else {
+            leaveLobby()
+            Platform.runLater {
+                currentView.replaceWith<LobbySelectionView>()
+                refreshCurrentView()
+            }
+        }
+
+    }
+
     private fun socketMessageHandler(msg: String) {
         println("RECEIVED: ${msg}")
         with(msg.toDto<DtoType>()) {
@@ -230,18 +289,18 @@ class ViewController : Controller() {
                             }
 
                             LOBBY_INFO -> {
-                                currentLobby = msg.toDto()
-                                Platform.runLater {
-                                    currentView.replaceWith<LobbyView>()
-                                    refreshCurrentView()
-                                }
+                                lobbyInfo(msg)
                             }
                         }
                     }
                 }
 
-                "GAME" -> {
+                GAME -> {
                     gameController.handle(msg)
+                }
+
+                STATS -> {
+                    handleStats(msg.toDto())
                 }
 
                 else -> {

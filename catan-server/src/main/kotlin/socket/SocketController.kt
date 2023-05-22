@@ -8,12 +8,21 @@ import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.*
+import java.io.File
 
 class SocketController(
     private val socketService: SocketService,
     private val port: Int
 ) {
     fun startController() {
+        val cfg = File("build/resources/serverConfig.txt")
+        var port = 0
+        cfg.readLines()
+        cfg.forEachLine {
+            if(it.startsWith("port=")){
+                port = it.removePrefix("port=").toInt()
+            }
+        }
         runBlocking {
             val selectorManager = SelectorManager(Dispatchers.IO)
             val serverSocket = aSocket(selectorManager).tcp()
@@ -49,7 +58,7 @@ class SocketConnection(
                     break
                 }
                 println("Message received $message")
-                socketService.handleIncomingStuff(
+                socketService.handleIncomingMessage(
                     this@SocketConnection,
                     message
                 )

@@ -5,10 +5,8 @@ import com.catan.sdk.dto.game.MonopolyDto
 import com.catan.sdk.dto.game.StealDto
 import com.catan.sdk.dto.game.TwoRoadDto
 import com.catan.sdk.dto.game.YearOfPlentyDto
-import com.catan.sdk.dto.game.fromclient.BuyDto
+import com.catan.sdk.dto.game.fromclient.*
 import com.catan.sdk.dto.game.fromclient.BuyType.*
-import com.catan.sdk.dto.game.fromclient.MaritimeTradeDto
-import com.catan.sdk.dto.game.fromclient.PlaceBeginningDto
 import com.catan.sdk.dto.game.fromserver.*
 import com.catan.sdk.dto.game.fromserver.FromServerPayloadType.SOMEONELEFT
 import com.catan.sdk.entities.*
@@ -28,22 +26,23 @@ class Game(
     private val sessionService: SessionService,
     private val databaseService: DatabaseService,
     private val diceRoller: DiceRoller = DiceRoller(),
-    private val villagesAtBeginning: Int = 2,
+    private val settlementsAtBeginning: Int = 2,
     private val roadsAtBeginning: Int = 2,
-    private val maxVillages: Int = 5,
+    private val maxSettlements: Int = 5,
     private val maxRoads: Int = 15,
     private val maxCities: Int = 5,
     private val minimumForLongestRoad: Int = 5,
+    private val minimumForMostKnights: Int = 3,
     private val developmentPool: DevelopmentPool = DevelopmentPool(
-        15,
+        14,
         2,
         2,
         2,
-        2,
-        2,
-        2,
-        2,
-        2
+        1,
+        1,
+        1,
+        1,
+        1
     ),
     private val pointsToWin: Int = 10,
     currentPlayerIndex: Int = 0
@@ -52,13 +51,15 @@ class Game(
     var currentPlayer: Player
     val map: Map = Map()
     private var beginningPlacementsRoad: MutableMap<String, Int>
-    private val beginningPlacementsVillage: MutableMap<String, Int>
+    private val beginningPlacementsSettlement: MutableMap<String, Int>
     var gameState = Anything
+    private var developmentPlayed = false
     var atBeginning = true
         private set
 
     var ownerOfLongestRoad: Player? = null
     var winners = mutableListOf<Player>()
+    var currentTradeOffers = mutableListOf<PlayerTradeDto>()
 
 
     init {
@@ -69,8 +70,8 @@ class Game(
         beginningPlacementsRoad = players.associate {
             it.username to roadsAtBeginning
         } as MutableMap<String, Int>
-        beginningPlacementsVillage = players.associate {
-            it.username to villagesAtBeginning
+        beginningPlacementsSettlement = players.associate {
+            it.username to settlementsAtBeginning
         } as MutableMap<String, Int>
     }
 
@@ -94,9 +95,9 @@ class Game(
                 buyRoad(dto.id!!)
             }
 
-            VILLAGE -> {
+            SETTLEMENT -> {
                 if (dto.id == null) return
-                buyVillage(dto.id!!)
+                buySettlement(dto.id!!)
             }
 
             CITY -> {
@@ -120,12 +121,12 @@ class Game(
         }
         var anyLeft = false
 
-        beginningPlacementsVillage.forEach {
+        beginningPlacementsSettlement.forEach {
             anyLeft = anyLeft || (it.value != 0)
         }
 
         checkLocations(dto.edgeId, dto.vertexId)
-        val outcome = placeVillageAtBeginning(dto.vertexId) && placeRoadAtBeginning(dto.edgeId)
+        val outcome = placeSettlementAtBeginning(dto.vertexId) && placeRoadAtBeginning(dto.edgeId)
         if (!outcome) {
             println("Something went wrong with beginning placements... ")
         }
@@ -140,7 +141,7 @@ class Game(
         sessionService.sendDatas(players.map {
             it to ChangeOnBoardDto(
                 dto.vertexId,
-                ChangeType.VILLAGE,
+                ChangeType.SETTLEMENT,
                 currentPlayer.username
 
             ).toJson()
@@ -162,22 +163,24 @@ class Game(
             giveResourcesAfterInitialPlacings()
             nextPlayer()
         }
-
     }
 
     fun nextPlayer() {
         if (gameState != Anything) return
         val currentIndex = players.indexOf(currentPlayer)
         currentPlayer = players[if (currentIndex == players.size - 1) 0 else currentIndex + 1]
+        developmentPlayed = false
         sendPlayers(CurrentPlayerDto(currentPlayer.username, !atBeginning))
         rollTheDice()
         enableDevelopments()
         sendAllPlayersResources()
         sendRemainingDevelopmentCardCount()
+        currentTradeOffers.clear()
+
     }
 
-    fun playerLeft(username: String){
-        val player = players.find {
+    fun playerLeft(username: String) {
+        players.find {
             it.username == username
         } ?: return
         gameState = Ended
@@ -187,8 +190,8 @@ class Game(
     }
 
     fun maritimeTrade(tradeDto: MaritimeTradeDto) {
-        if(tradeDto.fromResource == tradeDto.toResource) return
-        when(tradeDto.tradeType) {
+        if (tradeDto.fromResource == tradeDto.toResource) return
+        when (tradeDto.tradeType) {
             FourToOne -> fourToOneTrade(tradeDto)
             ThreeToOne -> threeToOneTrade(tradeDto)
             else -> twoToOne(tradeDto)
@@ -196,24 +199,46 @@ class Game(
         sendAllPlayersResources()
     }
 
+    fun handleTradeOffer(dto: PlayerTradeDto) {
+        if(currentPlayer.resources[dto.resource]!! < dto.amount) return
+        if(dto.withWho == currentPlayer.username) return
+        currentTradeOffers.add(dto)
+        sendAllPlayersResources()
+    }
+
+    fun acceptOffer(dto: AcceptTrade, username: String) {
+        if(dto.id >= currentTradeOffers.size) return
+        val trade = currentTradeOffers[dto.id]
+        if (trade.withWho != username) return
+        val toPlayer = players.find { it.username == trade.withWho } ?: return
+        if (toPlayer.resources[trade.toResource]!! < trade.toAmount) return
+        currentPlayer.resources[trade.resource] = (currentPlayer.resources[trade.resource] ?: 0 ) - trade.amount
+        toPlayer.resources[trade.toResource] = (toPlayer.resources[trade.toResource] ?: 0 ) - trade.toAmount
+
+        currentPlayer.resources[trade.toResource] = (currentPlayer.resources[trade.toResource] ?: 0 ) + trade.toAmount
+        toPlayer.resources[trade.resource] = (toPlayer.resources[trade.resource] ?: 0 ) + trade.amount
+        currentTradeOffers.clear()
+        sendAllPlayersResources()
+    }
+
     //region Maritime Trade stuff
-    private fun fourToOneTrade(tradeDto: MaritimeTradeDto){
-        if(currentPlayer.resources[tradeDto.fromResource]!! < 4) return
+    private fun fourToOneTrade(tradeDto: MaritimeTradeDto) {
+        if (currentPlayer.resources[tradeDto.fromResource]!! < 4) return
         currentPlayer.resources[tradeDto.fromResource] = currentPlayer.resources[tradeDto.fromResource]!! - 4
         currentPlayer.resources[tradeDto.toResource] = currentPlayer.resources[tradeDto.toResource]!! + 1
 
     }
 
-    private fun threeToOneTrade(tradeDto: MaritimeTradeDto){
-        if(currentPlayer.resources[tradeDto.fromResource]!! < 3) return
+    private fun threeToOneTrade(tradeDto: MaritimeTradeDto) {
+        if (currentPlayer.resources[tradeDto.fromResource]!! < 3) return
         currentPlayer.resources[tradeDto.fromResource] = currentPlayer.resources[tradeDto.fromResource]!! - 3
         currentPlayer.resources[tradeDto.toResource] = currentPlayer.resources[tradeDto.toResource]!! + 1
 
     }
 
     private fun twoToOne(tradeDto: MaritimeTradeDto) {
-        if(currentPlayer.resources[tradeDto.fromResource]!! < 2) return
-        val goodTrade = when(tradeDto.tradeType){
+        if (currentPlayer.resources[tradeDto.fromResource]!! < 2) return
+        val goodTrade = when (tradeDto.tradeType) {
             TwoToOneWood -> tradeDto.fromResource == Lumber || tradeDto.toResource == Lumber
             TwoToOneSheep -> tradeDto.fromResource == Wool || tradeDto.toResource == Wool
             TwoToOneBrick -> tradeDto.fromResource == Brick || tradeDto.toResource == Brick
@@ -221,7 +246,7 @@ class Game(
             TwoToOneWheat -> tradeDto.fromResource == Grain || tradeDto.toResource == Grain
             else -> false
         }
-        if(!goodTrade) return
+        if (!goodTrade) return
         currentPlayer.resources[tradeDto.fromResource] = currentPlayer.resources[tradeDto.fromResource]!! - 2
         currentPlayer.resources[tradeDto.toResource] = currentPlayer.resources[tradeDto.toResource]!! + 1
 
@@ -254,7 +279,7 @@ class Game(
         currentPlayer.cards.add(
             DevelopmentCard(
                 cardType,
-                cardType == Knight
+                true
             )
         )
         sendRemainingDevelopmentCardCount()
@@ -332,7 +357,7 @@ class Game(
         sendAllPlayersResources()
     }
 
-    private fun buyVillage(id: String) {
+    private fun buySettlement(id: String) {
         if (currentPlayer.resources[Lumber]!! < 1) return           //Todo
         if (currentPlayer.resources[Brick]!! < 1) return            //Todo
         if (currentPlayer.resources[Wool]!! < 1) return             //Todo
@@ -352,7 +377,7 @@ class Game(
             it.owner == currentPlayer
         } ?: return
 
-        if (!placeVillage(vertex)) return
+        if (!placeSettlement(vertex)) return
 
         currentPlayer.resources[Lumber] = currentPlayer.resources[Lumber]!! - 1
         currentPlayer.resources[Brick] = currentPlayer.resources[Brick]!! - 1
@@ -363,7 +388,7 @@ class Game(
         sessionService.sendDatas(players.map {
             it to ChangeOnBoardDto(
                 vertex.id,
-                ChangeType.VILLAGE,
+                ChangeType.SETTLEMENT,
                 currentPlayer.username
             ).toJson()
         })
@@ -406,8 +431,8 @@ class Game(
         return true
     }
 
-    private fun placeVillageAtBeginning(id: String): Boolean {
-        if (beginningPlacementsVillage[currentPlayer.username]!! < 1) return false
+    private fun placeSettlementAtBeginning(id: String): Boolean {
+        if (beginningPlacementsSettlement[currentPlayer.username]!! < 1) return false
         val tile = map.tiles.find {
             it.vertices.find {
                 it?.id == id
@@ -417,9 +442,10 @@ class Game(
             it?.id == id
         } ?: return false
 
-        if (!placeVillage(vertex)) return false
-        beginningPlacementsVillage[currentPlayer.username] = beginningPlacementsVillage[currentPlayer.username]!! - 1
-        println("Placing village at beginning for ${currentPlayer.username} remaining ${beginningPlacementsVillage[currentPlayer.username]}")
+        if (!placeSettlement(vertex)) return false
+        beginningPlacementsSettlement[currentPlayer.username] =
+            beginningPlacementsSettlement[currentPlayer.username]!! - 1
+        println("Placing settlement at beginning for ${currentPlayer.username} remaining ${beginningPlacementsSettlement[currentPlayer.username]}")
         return true
     }
 
@@ -440,21 +466,21 @@ class Game(
     //endregion
 
     //region Placing stuff
-    private fun placeVillage(vertex: Vertex): Boolean {
+    private fun placeSettlement(vertex: Vertex): Boolean {
         if (vertex.owner != null) return false
-        if (currentPlayer.buildings[BuildType.VILLAGE]!! == maxVillages) return false
+        if (currentPlayer.buildings[BuildType.SETTLEMENT]!! == maxSettlements) return false
         vertex.owner = currentPlayer
-        vertex.buildingType = BuildType.VILLAGE
-        currentPlayer.buildings[BuildType.VILLAGE] = currentPlayer.buildings[BuildType.VILLAGE]!! + 1
+        vertex.buildingType = BuildType.SETTLEMENT
+        currentPlayer.buildings[BuildType.SETTLEMENT] = currentPlayer.buildings[BuildType.SETTLEMENT]!! + 1
         return true
     }
 
     private fun placeCity(vertex: Vertex): Boolean {
-        if (vertex.owner != currentPlayer && vertex.buildingType != BuildType.VILLAGE) return false
+        if (vertex.owner != currentPlayer && vertex.buildingType != BuildType.SETTLEMENT) return false
         if (currentPlayer.buildings[BuildType.CITY]!! == maxCities) return false
         vertex.owner = currentPlayer
         vertex.buildingType = BuildType.CITY
-        currentPlayer.buildings[BuildType.VILLAGE] = currentPlayer.buildings[BuildType.VILLAGE]!! - 1
+        currentPlayer.buildings[BuildType.SETTLEMENT] = currentPlayer.buildings[BuildType.SETTLEMENT]!! - 1
         currentPlayer.buildings[BuildType.CITY] = currentPlayer.buildings[BuildType.CITY]!! + 1
         return true
     }
@@ -463,7 +489,7 @@ class Game(
         edge.endPoints.first,
         edge.endPoints.second
     ).any {
-        it.owner == currentPlayer && it.edges.any { it.owner == currentPlayer || it === pseudoEdge }
+        it.owner == currentPlayer || it.edges.any { it.owner == currentPlayer || it == pseudoEdge }
     }
 
     private fun placeRoad(edge: Edge): Boolean {
@@ -478,25 +504,44 @@ class Game(
 
     //region Development stuff
     fun useMonopoly(monopolyDto: MonopolyDto) {
+        if (developmentPlayed) return
         val resourceType = monopolyDto.resourceType
         var allOfTheResources = 0
+        if (currentPlayer.getMonopolies().none { !it.hasToWait && !it.used }) {
+            return
+        }
         players.forEach {
             if (it != currentPlayer) {
                 allOfTheResources += it.resources[resourceType]!!
                 it.resources[resourceType] = 0
             }
         }
+        val a = currentPlayer.getMonopolies().find {
+            !it.hasToWait && !it.used
+        } ?: return
+        a.used = true
         currentPlayer.resources[resourceType] = currentPlayer.resources[resourceType]!! + allOfTheResources
         sendAllPlayersResources()
+        developmentPlayed = true
     }
 
     fun useYearOfPlenty(yearOfPlentyDto: YearOfPlentyDto) {
+        if (developmentPlayed) return
+        if (currentPlayer.getYearOfPlenties().none { !it.hasToWait && !it.used }) {
+            return
+        }
+        val a = currentPlayer.getYearOfPlenties().find {
+            !it.hasToWait && !it.used
+        } ?: return
+        a.used = true
         currentPlayer.resources[yearOfPlentyDto.resource1] = currentPlayer.resources[yearOfPlentyDto.resource1]!! + 1
         currentPlayer.resources[yearOfPlentyDto.resource2] = currentPlayer.resources[yearOfPlentyDto.resource2]!! + 1
         sendAllPlayersResources()
+        developmentPlayed = true
     }
 
     fun useTwoRoad(twoRoadDto: TwoRoadDto) {
+        if (developmentPlayed) return
         if (currentPlayer.buildings[BuildType.ROAD]!! == maxRoads) {
             println("No roads remaining")
             return
@@ -504,7 +549,7 @@ class Game(
             println("No roads remaining")
             return
         }
-        if (currentPlayer.getRoadBuildings().count { !it.hasToWait && !it.used } < 1) {
+        if (currentPlayer.getRoadBuildings().none { !it.hasToWait && !it.used }) {
             println("Not enough Road Buildings")
             return
         }
@@ -527,22 +572,26 @@ class Game(
         val usedCard = currentPlayer.getRoadBuildings().first { !it.hasToWait && !it.used }
         usedCard.used = true
         sendAllPlayersResources()
-        sessionService.sendDatas(players.map {
-            it to ChangeOnBoardDto(
-                edge1.id,
-                ChangeType.ROAD,
-                currentPlayer.username
-            ).toJson()
-        })
-        if (edge2 != null) {
-            sessionService.sendDatas(players.map {
+        sessionService.sendDatas(
+            players.map {
                 it to ChangeOnBoardDto(
-                    edge2.id,
+                    edge1.id,
                     ChangeType.ROAD,
                     currentPlayer.username
                 ).toJson()
             })
+        if (edge2 != null) {
+            sessionService.sendDatas(
+                players.map {
+                    it to ChangeOnBoardDto(
+                        edge2.id,
+                        ChangeType.ROAD,
+                        currentPlayer.username
+                    ).toJson()
+                }
+            )
         }
+        developmentPlayed = true
     }
 
     fun steal(stealDto: StealDto) {
@@ -560,6 +609,9 @@ class Game(
         }
 
         if (stealDto.isKnight) {
+            if (developmentPlayed) {
+                return
+            }
             if (knights.isEmpty()) {
                 println("There is no knight to use")
                 return
@@ -580,24 +632,18 @@ class Game(
         if (stealDto.isKnight) {
             currentPlayer.cards.remove(knights[0])
             currentPlayer.activeDevelopments.add(knights[0])
+            knights[0].used = true
             calculateMostKnights()
         }
         gameState = Anything
+        developmentPlayed = true
         sendAllPlayersResources()
-    }
-
-    private fun usePoint(devType: DevelopmentTypes) {
-        val card = currentPlayer.cards.find {
-            it.developmentTypes == devType
-        } ?: return
-        card.used = true
-        currentPlayer.cards.remove(card)
-        currentPlayer.activeDevelopments + card
     }
 
     private fun calculateMostKnights() {
         val currentHolder = players.find { it.ownerOfMostKnights }
         val max = players.maxOf { it.getKnights().count { it.used } }
+        if (max < minimumForMostKnights) return
         val potentials = players.filter { it.getKnights().count { it.used } == max }
         if (potentials.size == 1) {
             if (potentials.single() != currentHolder) {
@@ -662,6 +708,19 @@ class Game(
             ).toJson()
         }
         sessionService.sendDatas(datas)
+        if (currentTradeOffers.isEmpty()) return
+        val offers = currentTradeOffers.mapIndexed { index, playerTradeDto ->
+            playerTradeDto.withWho to playerTradeDto.toOffer(
+                index,
+                currentPlayer.username
+            )
+        }
+        val offerDats = players.map { player ->
+            player to PlayerTradeOffersDto(
+                offers.filter { it.first == player.username }.map { it.second }
+            ).toJson()
+        }
+        sessionService.sendDatas(offerDats)
     }
 
     private fun stealFrom(username: String) {
@@ -734,7 +793,7 @@ class Game(
                 if (it?.owner != null && tile.type != DESERT) {
                     it.owner!!.resources[tile.type.toResourceType()!!] =
                         (it.owner!!.resources[tile.type.toResourceType()]
-                            ?: 0) + if (it.buildingType == BuildType.VILLAGE) 1 else 2
+                            ?: 0) + if (it.buildingType == BuildType.SETTLEMENT) 1 else 2
                 }
             }
         }
@@ -755,6 +814,7 @@ class Game(
         if (candidates.size > 1) return
         candidates.single().ownerOfLongestRoad = true
         ownerOfLongestRoad?.ownerOfLongestRoad = false
+        ownerOfLongestRoad = candidates.single()
         sendAllPlayersResources()
     }
 

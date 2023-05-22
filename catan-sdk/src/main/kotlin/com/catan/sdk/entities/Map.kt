@@ -10,7 +10,6 @@ class Map {
     val vertexes = mutableSetOf<Vertex>()
 
     private var VERTEX_COUNTER = 0
-    private var EDGE_COUNTER = 0
     private var TILE_COUNTER = 0
 
     fun loadFromDto(mapDto: MapDto) {
@@ -19,7 +18,6 @@ class Map {
         vertexes.clear()
         edges.clear()
         VERTEX_COUNTER = 0
-        EDGE_COUNTER = 0
         TILE_COUNTER = 0
         mapDto.rows.forEach {
             val row = mutableListOf<Tile>()
@@ -32,10 +30,6 @@ class Map {
         }
     }
 
-    fun tile(id: String) = tiles.filter {
-        it.id == id
-    }
-
     fun getMaritimeLocations() = vertexes.filter {
         it.tradeType != FourToOne
     }.map {
@@ -45,7 +39,6 @@ class Map {
     fun getBuyableVertexes(player: Player, ignoreRoad: Boolean = false): List<Vertex> = vertexes.filter {
         it.canBeBoughtBy(player, ignoreRoad)
     }
-
 
     fun getBuyableEdges(player: Player): List<Edge> = edges.filter {
         it.owner == null && it.canBeOwned && (it.endPoints.first.edges.find { it.owner == player } != null || it.endPoints.second.edges.find { it.owner == player } != null)
@@ -59,7 +52,8 @@ class Map {
         rows.clear()
         tiles.clear()
         vertexes.clear()
-        EDGE_COUNTER = 0
+        VERTEX_COUNTER = 0
+        TILE_COUNTER = 0
 
         var additive = true
         var numberOfTiles = 3
@@ -69,8 +63,7 @@ class Map {
                 val tile = Tile(
                     DESERT,
                     0,
-                    "T${TILE_COUNTER++}",
-                    EDGE_COUNTER
+                    "T${TILE_COUNTER++}"
                 )
                 row.add(
                     tile
@@ -286,13 +279,6 @@ class Map {
             )
         }
         addEdges()
-        addRolledNumberToVertices()
-    }
-
-    private fun addRolledNumberToVertices() {
-        tiles.forEach {
-            it.addRolledNumberToVertices()
-        }
     }
 
     private fun addEdges() {
@@ -350,23 +336,18 @@ class Map {
         0 -> {
             Coordinate(row = -1, column = -1)
         }
-
         1 -> {
             Coordinate(row = 0, column = cord.column - 1)
         }
-
         2 -> {
             Coordinate(row = 1, column = cord.column - 1)
         }
-
         3 -> {
             Coordinate(row = 2, column = cord.column)
         }
-
         4 -> {
             Coordinate(row = 3, column = cord.column)
         }
-
         else -> {
             Coordinate(-1 to -1)
         }
@@ -387,14 +368,12 @@ class Map {
         if (id < 19) return Coordinate(row = 4, column = id - 16)
         return Coordinate(-1 to -1)
     }
-
-
 }
 
 fun Tile.toDto() = TileDto(
     this.id,
-    this.type,
     this.rolledNumber,
+    this.type,
     this.isBlocked
 )
 
@@ -408,8 +387,8 @@ class RowDto(
 
 class TileDto(
     val id: String,
-    val type: FieldType,
     val rolledNumber: Int,
+    val type: FieldType,
     val isBlocked: Boolean
 )
 

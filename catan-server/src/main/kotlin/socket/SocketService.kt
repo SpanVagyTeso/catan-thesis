@@ -1,9 +1,6 @@
 package socket
 
-import com.catan.sdk.dto.DtoType
-import com.catan.sdk.dto.LOBBY_BASE
-import com.catan.sdk.dto.LOGIN
-import com.catan.sdk.dto.REGISTER
+import com.catan.sdk.dto.*
 import com.catan.sdk.dto.error.BadDto
 import com.catan.sdk.dto.game.GAME
 import com.catan.sdk.toDto
@@ -16,9 +13,10 @@ class SocketService(
     private val registerService: RegisterService,
     private val lobbyService: LobbyService,
     private val gameService: GameService,
-    private val sessionService: SessionService
+    private val sessionService: SessionService,
+    private val statisticsService: StatisticsService
 ) {
-    suspend fun handleIncomingStuff(socket: SocketConnection, message: String) {
+    suspend fun handleIncomingMessage(socket: SocketConnection, message: String) {
         val dtoType: String
         try {
             dtoType = message.toDto<DtoType>().type
@@ -44,6 +42,11 @@ class SocketService(
 
             GAME -> {
                 gameService.handleIncomingMessage(message)
+            }
+
+            STATS -> {
+                val response = statisticsService.getStats(message.toDto())
+                socket.sendMessage(response.toJson())
             }
 
             else -> {

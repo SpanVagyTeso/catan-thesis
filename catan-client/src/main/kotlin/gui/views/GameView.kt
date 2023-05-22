@@ -2,7 +2,7 @@ package gui.views
 
 import com.catan.sdk.entities.*
 import com.catan.sdk.entities.BuildType.CITY
-import com.catan.sdk.entities.BuildType.VILLAGE
+import com.catan.sdk.entities.BuildType.SETTLEMENT
 import com.catan.sdk.entities.DevelopmentTypes.*
 import com.catan.sdk.entities.TradeType.*
 import controller.GameState
@@ -53,6 +53,7 @@ class GameView : BaseView() {
                 handleClick(id)
             }
         }
+        paddingRight = 5
     }
 
 
@@ -79,8 +80,9 @@ class GameView : BaseView() {
     private fun refreshMiscellaneousHud() {
         miscellaneousHud.clear()
         miscellaneousHud.apply {
+            spacing = 5.0
             label {
-                text = currentActionText() + " ${gameController.state}"
+                text = currentActionText()
             }
             if (gameController.state !in setOf(Start, StartOther, StartPlaceRoad)) {
                 label {
@@ -113,11 +115,11 @@ class GameView : BaseView() {
             }
 
             Start -> {
-                "Place down a village!"
+                "Place down a settlement!"
             }
 
             StartPlaceRoad -> {
-                "Place down a road next to the previous village!"
+                "Place down a road next to the previous settlement!"
             }
 
             Seven -> {
@@ -141,7 +143,7 @@ class GameView : BaseView() {
                 drawHexagons(controller.map())
 
                 drawEdges(gameController.map.edges.filter { it.owner != null })
-                drawVillagesAndCities(corners)
+                drawSettlementsAndCities(corners)
 
 
                 when (gameController.state) {
@@ -158,14 +160,14 @@ class GameView : BaseView() {
                         drawEdges(gameController.getGoodRoads(), RED, 6.0)
                     }
 
-                    BuyVillage -> {
+                    BuySettlement -> {
                         drawCirclesOnCorner(gameController.getGoodCorners())
                     }
 
                     BuyCity -> {
-                        val villages = gameController.getCurrentPlayerVillages().toSet()
-                        highlightVillages(corners.filter {
-                            villages.contains(it.key)
+                        val settlements = gameController.getCurrentPlayerSettlements().toSet()
+                        highlightSettlements(corners.filter {
+                            settlements.contains(it.key)
                         })
                     }
 
@@ -184,7 +186,9 @@ class GameView : BaseView() {
                     { developmentMenu() },
                     { buyMenu() },
                     { gameController.passTheTurn() },
-                    { refresh() }
+                    { refresh() },
+                    { maritimeTradeMenu() },
+                    { playerTradeMenu() }
                 )
             )
         }
@@ -195,6 +199,7 @@ class GameView : BaseView() {
         otherPlayerHud.apply {
             gameController.otherPlayers().forEach {
                 hgap = 5.0
+
                 row {
                     add(OtherPlayerCard(it.value))
                 }
@@ -211,9 +216,9 @@ class GameView : BaseView() {
                 setGameState(Normal)
             }
 
-            BuyVillage -> {
+            BuySettlement -> {
                 if (id.startsWith("V")) {
-                    gameController.buyVillage(id)
+                    gameController.buySettlement(id)
                 }
                 setGameState(Normal)
             }
@@ -226,8 +231,9 @@ class GameView : BaseView() {
             }
 
             UseRoads -> {
-                if(id.startsWith("E")) {
+                if (id.startsWith("E")) {
                     gameController.consumeTwoRoads(id)
+                    refresh()
                 }
             }
 
@@ -237,7 +243,7 @@ class GameView : BaseView() {
                     if (tile.isBlocked) return
                     val players = tile.vertices.filter {
                         it?.owner != null && it.owner != gameController.me
-                    }.mapNotNull { it!!.owner }
+                    }.mapNotNull { it!!.owner }.toSet()
                     if (players.isEmpty()) {
                         gameController.steal(tile, gameController.state == UseKnight, null)
                         setGameState(Normal)
@@ -245,21 +251,21 @@ class GameView : BaseView() {
                         gameController.steal(tile, gameController.state == UseKnight, players.single())
                         setGameState(Normal)
                     } else {
-                        stealingMenu(players, tile, gameController.state == UseKnight)
+                        stealingMenu(players.toList(), tile, gameController.state == UseKnight)
                     }
                 }
             }
 
             Start -> {
                 if (id.startsWith("V")) {
-                    gameController.setStartVillage(id)
+                    gameController.setStartSettlement(id)
                     refresh()
                 }
             }
 
             StartPlaceRoad -> {
                 if (id.startsWith("E")) {
-                    gameController.sendStartVillageAndRoad(id)
+                    gameController.sendStartSettlementAndRoad(id)
                     refresh()
                 }
             }
@@ -284,12 +290,12 @@ class GameView : BaseView() {
         }
     }
 
-    private fun Parent.drawVillagesAndCities(corners: HashMap<Vertex, Pair<Double, Double>>) {
+    private fun Parent.drawSettlementsAndCities(corners: HashMap<Vertex, Pair<Double, Double>>) {
         corners.forEach { (k, v) ->
             if (k.owner != null) {
                 when (k.buildingType) {
-                    VILLAGE -> {
-                        village {
+                    SETTLEMENT -> {
+                        settlement {
                             color = k.owner!!.playerColor.toJavaColor()
                             layoutX = v.first - boundsInLocal.maxX / 2
                             layoutY = v.second - boundsInLocal.maxY / 2
@@ -312,12 +318,12 @@ class GameView : BaseView() {
         }
     }
 
-    private fun Parent.highlightVillages(corners: Map<Vertex, Pair<Double, Double>>) {
+    private fun Parent.highlightSettlements(corners: Map<Vertex, Pair<Double, Double>>) {
         corners.forEach { (k, v) ->
             if (k.owner != null) {
                 when (k.buildingType) {
-                    VILLAGE -> {
-                        village {
+                    SETTLEMENT -> {
+                        settlement {
                             isHighlighted = true
                             color = k.owner!!.playerColor.toJavaColor()
                             layoutX = v.first - boundsInLocal.maxX / 2
@@ -527,7 +533,8 @@ class GameView : BaseView() {
                         with(gameController.me!!) {
                             button {
                                 val knights = getKnights()
-                                isDisable = knights.count { !it.hasToWait && !it.used } == 0
+                                isDisable =
+                                    knights.count { !it.hasToWait && !it.used } == 0 || gameController.developmentPlayed
                                 text = "Use"
                                 action {
                                     closeMenu()
@@ -536,7 +543,8 @@ class GameView : BaseView() {
                             }
                             button {
                                 val yearOfPlenties = getYearOfPlenties()
-                                isDisable = yearOfPlenties.count { !it.hasToWait && !it.used } == 0
+                                isDisable =
+                                    yearOfPlenties.count { !it.hasToWait && !it.used } == 0 || gameController.developmentPlayed
                                 text = "Use"
                                 action {
                                     closeMenu()
@@ -546,7 +554,8 @@ class GameView : BaseView() {
                             }
                             button {
                                 val roads = getRoadBuildings()
-                                isDisable = roads.count { !it.hasToWait && !it.used } == 0
+                                isDisable =
+                                    roads.count { !it.hasToWait && !it.used } == 0 || gameController.developmentPlayed
                                 text = "Use"
                                 action {
                                     setGameState(UseRoads)
@@ -555,7 +564,8 @@ class GameView : BaseView() {
                             }
                             button {
                                 val monopolies = getMonopolies()
-                                isDisable = monopolies.count { !it.hasToWait && !it.used } == 0
+                                isDisable =
+                                    monopolies.count { !it.hasToWait && !it.used } == 0 || gameController.developmentPlayed
                                 text = "Use"
                                 action {
                                     closeMenu()
@@ -629,7 +639,7 @@ class GameView : BaseView() {
                     hgap = 10.0
                     row {
                         label {
-                            text = "Choose two resources!"
+                            text = "Choose a resource to monopolize!"
                         }
                     }
                     val resourceBox = combobox<ResourceType> {
@@ -645,6 +655,7 @@ class GameView : BaseView() {
                             text = "Buy"
                             action {
                                 closeMenu()
+                                setGameState(Normal)
                                 gameController.useMonopoly(resourceBox.value)
                             }
                         }
@@ -698,6 +709,7 @@ class GameView : BaseView() {
                             text = "Buy"
                             action {
                                 closeMenu()
+                                setGameState(Normal)
                                 gameController.useYearsOfPlenty(resourceBox1.value, resourceBox2.value)
                             }
                         }
@@ -745,13 +757,13 @@ class GameView : BaseView() {
                                     text = "Road"
                                 }
                                 label {
-                                    text = "Village"
+                                    text = "Settlement"
                                 }
                                 label {
                                     text = "City"
                                 }
                                 label {
-                                    text = "Upgrade"
+                                    text = "Development"
                                 }
                             }
                             row {
@@ -761,7 +773,7 @@ class GameView : BaseView() {
                                     height = 10.0
                                     fill = myColor
                                 }
-                                village {
+                                settlement {
                                     size = 25.0
                                     color = myColor
                                 }
@@ -789,10 +801,10 @@ class GameView : BaseView() {
                                 }
                                 button {
                                     text = "Buy"
-                                    isDisable = !gameController.canBuyVillage()
+                                    isDisable = !gameController.canBuySettlement()
                                     action {
                                         closeMenu()
-                                        buyVillage()
+                                        buySettlement()
                                     }
                                 }
                                 button {
@@ -868,46 +880,15 @@ class GameView : BaseView() {
                         }
                     }
 
-                    val options = gameController.getMaritimeTradOptions()
                     row {
-                        if (options[ThreeToOne] == false) {
-                            button {
-                                text = "Four to One"
-                                action {
-                                    gameController.maritimeTrade(
-                                        resourceBox1.value, resourceBox2.value, FourToOne
-                                    )
-                                }
-                            }
-                        } else {
-                            button {
-                                text = "Three to One"
-                                action {
-                                    gameController.maritimeTrade(
-                                        resourceBox1.value, resourceBox2.value, ThreeToOne
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    row {
-                        label {
-                            text = "Two to ones"
-                        }
-                    }
-                    row {
-                        options.forEach {
-                            if (it.key != ThreeToOne) {
-                                isDisable = it.value
-                                button {
-                                    text = it.key.toResourceName()
-                                    action {
-                                        gameController.maritimeTrade(
-                                            resourceBox1.value, resourceBox2.value, it.key
-                                        )
-                                    }
-                                }
-
+                        button {
+                            text = "Four to One"
+                            action {
+                                gameController.maritimeTrade(
+                                    resourceBox1.value, resourceBox2.value, FourToOne
+                                )
+                                closeMenu()
+                                setGameState(Normal)
                             }
                         }
                     }
@@ -927,20 +908,123 @@ class GameView : BaseView() {
         root.add(popUp)
     }
 
+    fun playerTradeMenu() {
+        val resourceBox1 = combobox {
+            items = observableListOf(
+                *ResourceType.values()
+            )
+        }
+        val resourceBox2 = combobox {
+            items = observableListOf(
+                *ResourceType.values()
+            )
+        }
+        val playerSelector = combobox {
+            items = observableListOf(
+                gameController.players.keys.filter { it != gameController.me!!.username }
+            )
+        }
+        val textField1 = textfield { }
+        val textField2 = textfield { }
+        popUp.apply {
+            rectangle {
+                width = root.width / 2
+                height = root.height / 2
+                fill = WHITE
+            }
+            group {
+                borderpane {
+                    top  {
+                        label {
+                            val resourceText = gameController.me!!.resources.map {
+                                "${it.key}: ${it.value}"
+                            }.joinToString(", ")
+                            text = "Resources: $resourceText"
+                        }
+                    }
+                    if(gameController.state == Normal) {
+                        center = gridpane {
+                            hgap = 10.0
+
+                            row {
+                                vgap = 5.0
+                                label {
+                                    text = "For my"
+                                }
+                                add(textField1)
+                                add(resourceBox1)
+                            }
+                            row {
+                                vgap = 5.0
+                                label {
+                                    text = "To their"
+                                }
+                                add(textField2)
+                                add(resourceBox2)
+                                add(playerSelector)
+                            }
+                            row {
+                                button {
+                                    text = "Send"
+                                    action {
+                                        try {
+                                            gameController.offerTrade(
+                                                resourceBox1.value,
+                                                textField1.text.toInt(),
+                                                resourceBox2.value,
+                                                textField2.text.toInt(),
+                                                playerSelector.value
+                                            )
+                                        } catch (_: Exception) {
+
+                                        }
+                                        closeMenu()
+                                        setGameState(Normal)
+
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        left = vbox {
+                            gameController.offers.forEach {
+                                add(TradeOffer(
+                                    it,
+                                ) {
+                                    gameController.acceptTrade(it.tradeId)
+                                    closeMenu()
+                                })
+                            }
+                        }
+                    }
+                    bottom {
+                        button {
+                            text = "Close"
+                            action {
+                                closeMenu()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        playField.effect = blur
+        root.add(popUp)
+    }
+
     fun closeMenu() {
         playField.effect = null
         root.clear()
         root.add(playField)
-        blur.height = 0.0
-        blur.width = 0.0
+
     }
 
     fun buyRoad() {
         setGameState(BuyRoad)
     }
 
-    fun buyVillage() {
-        setGameState(BuyVillage)
+    fun buySettlement() {
+        setGameState(BuySettlement)
     }
 
     fun buyCity() {
@@ -958,7 +1042,7 @@ class GameView : BaseView() {
     }
 }
 
-fun TradeType.toResourceName() : String = when(this) {
+fun TradeType.toResourceName(): String = when (this) {
     TwoToOneWood -> "Lumber"
     TwoToOneSheep -> "Wool"
     TwoToOneBrick -> "Brick"
@@ -971,5 +1055,5 @@ fun PlayerColor.toJavaColor(): Color = when (this) {
     PlayerColor.RED -> DARKRED
     PlayerColor.GREEN -> GREEN
     PlayerColor.BLUE -> BLUE
-    PlayerColor.YELLOW -> YELLOW
+    PlayerColor.YELLOW -> WHITE
 }

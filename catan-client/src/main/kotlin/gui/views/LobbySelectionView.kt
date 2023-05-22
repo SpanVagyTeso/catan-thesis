@@ -63,6 +63,14 @@ class LobbySelectionView : BaseView() {
                     joinLobby()
                 }
             }
+            button {
+                text = "Stats"
+                action {
+                    controller.currentView.replaceWith<StatsView>()
+                    controller.stats = null
+                    controller.refreshCurrentView()
+                }
+            }
         }
     }
 

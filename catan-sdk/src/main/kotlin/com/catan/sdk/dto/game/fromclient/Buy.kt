@@ -4,7 +4,7 @@ import com.catan.sdk.dto.game.fromclient.FromClientPayloadType.Buy
 
 enum class BuyType {
     ROAD,
-    VILLAGE,
+    SETTLEMENT,
     CITY,
     UPGRADE
 }

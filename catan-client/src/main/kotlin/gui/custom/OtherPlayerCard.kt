@@ -18,6 +18,7 @@ class OtherPlayerCard(val player: Player) : GridPane() {
         clear()
         row {
             gridpane {
+
                 row {
                     circle {
                         radius = 5.0
@@ -34,17 +35,23 @@ class OtherPlayerCard(val player: Player) : GridPane() {
             label {
                 text = "Resources: ${player.hiddenResources}"
             }
+        }
+        row{
             label {
-                text = "Unused Development: ${player.hiddenDevelopments}"
+                text = "Unused Developments: ${player.hiddenDevelopments}"
+                paddingLeft = 2.0
             }
+        }
+        row {
             label {
-                text = "Knights: ${player.activeDevelopments.count { it.developmentTypes == Knight }}"
+                text = "Used Knights: ${player.activeDevelopments.count { it.developmentTypes == Knight }}"
             }
         }
         row {
             if(player.ownerOfMostKnights){
                 label {
                     text = "Most Knight(+2 Point)"
+                    paddingLeft = 2.0
                 }
             }
             if(player.ownerOfLongestRoad){

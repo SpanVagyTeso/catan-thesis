@@ -5,6 +5,4 @@ class DevelopmentCard(
     var hasToWait: Boolean = false
 ) {
     var used = false
-
-    fun canBeUsed() = used && !hasToWait
 }

@@ -18,8 +18,11 @@ class LobbyService(
     val lobbies = mutableMapOf<String, Lobby>()
 
     fun closedSocket(username: String){
-        lobbies.values.forEach {
-            it.leave(username)
+        lobbies.forEach {(id, lobby) ->
+            lobby.leave(username)
+            if(lobby.isEmpty()) {
+                lobbies.remove(id)
+            }
         }
     }
 
@@ -64,9 +67,12 @@ class LobbyService(
     }
 
     private fun leaveLobby(msg: String) {
-        with(msg.toDto<StartLobbyDto>()) {
+        with(msg.toDto<LeaveLobbyDto>()) {
             val lobby = lobbies[lobbyId]!!
             lobby.leave(sessionService.getUserFromSessionId(this.sessionId!!)!!)
+            if(lobby.isEmpty()) {
+                lobbies.remove(lobbyId)
+            }
         }
     }
 
@@ -83,7 +89,9 @@ class LobbyService(
     private fun getAvailableLobbies(): AvailableLobbiesDto {
         return AvailableLobbiesDto(
             arrayOf(
-                *lobbies.values.map {
+                *lobbies.values.filter {
+                    !it.isStarted
+                }.map {
                     it.toDto()
                 }.toTypedArray()
             )
@@ -110,7 +118,7 @@ class LobbyService(
             createLobbyId().toString(),
             dto.size,
             sessionService.getUserFromSessionId(dto.sessionId!!)!!,
-            dto.name,
+            "${sessionService.getUserFromSessionId(dto.sessionId!!)!!}'s room.",
             sessionService,
             gameService
         )
@@ -119,10 +127,10 @@ class LobbyService(
     }
 
     private fun createLobbyId(): Int {
-        var rn: Int
+        var randomNumber: Int
         do {
-            rn = Random.nextInt(100000, 1000000)
-        } while (lobbies.containsKey(rn.toString()))
-        return rn
+            randomNumber = Random.nextInt(100000, 1000000)
+        } while (lobbies.containsKey(randomNumber.toString()))
+        return randomNumber
     }
 }

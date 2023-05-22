@@ -5,6 +5,7 @@ import socket.SocketService
 fun main() {
     val databaseService = DatabaseService()
     val sessionService = SessionService()
+    val statisticsService = StatisticsService(databaseService)
     val gameService = GameService(sessionService, databaseService)
     val lobbyService = LobbyService(sessionService, gameService)
     val loginService = LoginService(databaseService, sessionService)
@@ -14,7 +15,8 @@ fun main() {
         registerService,
         lobbyService,
         gameService,
-        sessionService
+        sessionService,
+        statisticsService
     )
     val sc = SocketController(
         socketService,

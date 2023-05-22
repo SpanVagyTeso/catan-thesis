@@ -11,7 +11,7 @@ data class ChangeOnBoardDto(
 enum class ChangeType {
     ROAD,
     CITY,
-    VILLAGE,
+    SETTLEMENT,
     REMOVEBLOCK,
     ADDBLOCK
 }

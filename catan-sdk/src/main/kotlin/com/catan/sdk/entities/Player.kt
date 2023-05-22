@@ -1,7 +1,7 @@
 package com.catan.sdk.entities
 
 import com.catan.sdk.entities.BuildType.CITY
-import com.catan.sdk.entities.BuildType.VILLAGE
+import com.catan.sdk.entities.BuildType.SETTLEMENT
 import com.catan.sdk.entities.DevelopmentTypes.*
 
 
@@ -112,25 +112,25 @@ class Player {
         return resourceList
     }
 
-    fun getKnights() = cards.filter { it.developmentTypes == Knight }
+    fun getKnights() = (cards+activeDevelopments).filter { it.developmentTypes == Knight }
 
-    fun getYearOfPlenties() = cards.filter { it.developmentTypes == YearOfPlenty }
+    fun getYearOfPlenties() = (cards+activeDevelopments).filter { it.developmentTypes == YearOfPlenty }
 
-    fun getRoadBuildings() = cards.filter { it.developmentTypes == RoadBuilding }
+    fun getRoadBuildings() = (cards+activeDevelopments).filter { it.developmentTypes == RoadBuilding }
 
-    fun getMonopolies() = cards.filter { it.developmentTypes == Monopoly }
+    fun getMonopolies() = (cards+activeDevelopments).filter { it.developmentTypes == Monopoly }
 
     fun calculateMyPoints(): Int {
         var sum = 0
-        sum += buildings[VILLAGE] ?: 0
+        sum += buildings[SETTLEMENT] ?: 0
         sum += (buildings[CITY] ?: 0) * 2
         sum += getPointCards().count()
-        sum += if(ownerOfLongestRoad) 2 else 0
-        sum += if(ownerOfMostKnights) 2 else 0
+        sum += if (ownerOfLongestRoad) 2 else 0
+        sum += if (ownerOfMostKnights) 2 else 0
         return sum
     }
 
-    fun getPointCards() = cards.filter {
+    fun getPointCards() = (cards+activeDevelopments).filter {
         it.developmentTypes in setOf(
             University,
             Market,

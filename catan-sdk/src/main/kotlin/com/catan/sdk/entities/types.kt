@@ -21,7 +21,7 @@ enum class ResourceType {
 }
 
 enum class TradeType {
-     FourToOne,
+    FourToOne,
     ThreeToOne,
     TwoToOneWood,
     TwoToOneSheep,
@@ -31,7 +31,7 @@ enum class TradeType {
 }
 
 enum class BuildType {
-    VILLAGE,
+    SETTLEMENT,
     CITY,
     ROAD
 }

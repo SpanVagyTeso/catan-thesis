@@ -30,12 +30,12 @@ class Vertex(
     }
 
     fun canBeBoughtBy(player: Player, ignoreRoad: Boolean = true): Boolean {
-        if (isThereAdjacentVillageOrCity()) return false
+        if (isThereAdjacentSettlementOrCity()) return false
         if (ignoreRoad) return true
         return edges.find { it.owner == player } != null
     }
 
-    private fun isThereAdjacentVillageOrCity() = edges.find {
+    private fun isThereAdjacentSettlementOrCity() = edges.find {
         it.endPoints.second.owner != null || it.endPoints.first.owner != null
     } != null
 

@@ -1,9 +1,11 @@
 package gui
 
-import com.catan.sdk.entities.Player
-import com.catan.sdk.entities.PlayerColor
+import com.catan.sdk.entities.Edge
+import com.catan.sdk.entities.FieldType
+import com.catan.sdk.entities.Tile
+import com.catan.sdk.entities.Vertex
 import controller.ViewController
-import gui.custom.OtherPlayerCard
+import gui.custom.hexagon
 import gui.views.LoginView
 import gui.views.RegisterView
 import javafx.application.Platform

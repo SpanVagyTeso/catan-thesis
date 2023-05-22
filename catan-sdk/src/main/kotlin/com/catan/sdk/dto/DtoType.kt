@@ -6,6 +6,7 @@ const val LOGIN = "LOGIN"
 const val REGISTER = "REGISTER"
 const val REGISTER_SUCCES = "REGISTERSUCCESS"
 const val BAD = "BAD"
+const val STATS = "STATS"
 
 open class DtoType(
     val type: String
