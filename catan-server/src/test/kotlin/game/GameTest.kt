@@ -6,7 +6,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.inspectors.forAllKeys
 import io.kotest.matchers.shouldBe
 import io.mockk.mockk
-import service.DatabaseService
+import database.DatabaseService
 
 class GameTest : FunSpec({
 

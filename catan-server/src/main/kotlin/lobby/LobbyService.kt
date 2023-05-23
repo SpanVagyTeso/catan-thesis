@@ -1,4 +1,4 @@
-package service
+package lobby
 
 import com.catan.sdk.dto.lobby.*
 import com.catan.sdk.toDto
@@ -6,13 +6,14 @@ import com.catan.sdk.toJson
 import error.InvalidLobbyId
 import error.InvalidSessionId
 import error.NotOwner
-import game.Lobby
+import game.GameService
+import session.SessionService
 import socket.SocketConnection
 import kotlin.random.Random
 
 class LobbyService(
-    private val sessionService: SessionService,
-    private val gameService: GameService
+        private val sessionService: SessionService,
+        private val gameService: GameService
 ) {
     //LobbyId to Lobby
     val lobbies = mutableMapOf<String, Lobby>()

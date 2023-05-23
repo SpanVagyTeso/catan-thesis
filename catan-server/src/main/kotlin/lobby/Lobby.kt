@@ -1,4 +1,4 @@
-package game
+package lobby
 
 import com.catan.sdk.dto.DtoType
 import com.catan.sdk.dto.game.fromserver.StartupDto
@@ -6,17 +6,18 @@ import com.catan.sdk.dto.lobby.LobbyDto
 import com.catan.sdk.toJson
 import error.LobbyFull
 import error.LobbyIsStarted
+import game.Game
+import game.GameService
 import kotlinx.coroutines.runBlocking
-import service.GameService
-import service.SessionService
+import session.SessionService
 
 class Lobby(
-    val lobbyId: String,
-    private val size: Int,
-    private var owner: String,
-    private val lobbyName: String,
-    private val sessionService: SessionService,
-    private val gameService: GameService
+        val lobbyId: String,
+        private val size: Int,
+        private var owner: String,
+        private val lobbyName: String,
+        private val sessionService: SessionService,
+        private val gameService: GameService
 ) {
     var isStarted = false
 

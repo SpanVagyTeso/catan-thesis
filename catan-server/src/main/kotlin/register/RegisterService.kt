@@ -1,8 +1,9 @@
-package service
+package register
 
 import com.catan.sdk.dto.register.RegisterDto
 import com.catan.sdk.dto.register.RegisterSuccessDto
 import com.catan.sdk.toDto
+import database.DatabaseService
 import database.User
 
 class RegisterService(

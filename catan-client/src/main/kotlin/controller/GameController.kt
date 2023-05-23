@@ -155,6 +155,10 @@ class GameController(
             toWho
         )
     }
+
+    fun atBeginning()  = state == Start ||
+        state == StartPlaceRoad ||
+        state == StartOther
     fun acceptTrade(id: Int){
         viewController.acceptTrade(id)
     }

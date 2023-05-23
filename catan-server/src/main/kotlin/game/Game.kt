@@ -18,22 +18,22 @@ import com.catan.sdk.entities.TradeType.*
 import com.catan.sdk.toJson
 import game.GameState.*
 import kotlinx.coroutines.runBlocking
-import service.DatabaseService
-import service.SessionService
+import database.DatabaseService
+import session.SessionService
 
 class Game(
-    val players: List<Player>,
-    private val sessionService: SessionService,
-    private val databaseService: DatabaseService,
-    private val diceRoller: DiceRoller = DiceRoller(),
-    private val settlementsAtBeginning: Int = 2,
-    private val roadsAtBeginning: Int = 2,
-    private val maxSettlements: Int = 5,
-    private val maxRoads: Int = 15,
-    private val maxCities: Int = 5,
-    private val minimumForLongestRoad: Int = 5,
-    private val minimumForMostKnights: Int = 3,
-    private val developmentPool: DevelopmentPool = DevelopmentPool(
+        val players: List<Player>,
+        private val sessionService: SessionService,
+        private val databaseService: DatabaseService,
+        private val diceRoller: DiceRoller = DiceRoller(),
+        private val settlementsAtBeginning: Int = 2,
+        private val roadsAtBeginning: Int = 2,
+        private val maxSettlements: Int = 5,
+        private val maxRoads: Int = 15,
+        private val maxCities: Int = 5,
+        private val minimumForLongestRoad: Int = 5,
+        private val minimumForMostKnights: Int = 3,
+        private val developmentPool: DevelopmentPool = DevelopmentPool(
         14,
         2,
         2,
@@ -44,8 +44,8 @@ class Game(
         1,
         1
     ),
-    private val pointsToWin: Int = 10,
-    currentPlayerIndex: Int = 0
+        private val pointsToWin: Int = 10,
+        currentPlayerIndex: Int = 0
 ) {
 
     var currentPlayer: Player

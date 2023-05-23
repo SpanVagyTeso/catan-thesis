@@ -6,15 +6,21 @@ import com.catan.sdk.dto.game.GAME
 import com.catan.sdk.toDto
 import com.catan.sdk.toJson
 import error.InvalidDto
+import game.GameService
+import lobby.LobbyService
+import login.LoginService
+import register.RegisterService
 import service.*
+import session.SessionService
+import statistics.StatisticsService
 
 class SocketService(
-    private val loginService: LoginService,
-    private val registerService: RegisterService,
-    private val lobbyService: LobbyService,
-    private val gameService: GameService,
-    private val sessionService: SessionService,
-    private val statisticsService: StatisticsService
+        private val loginService: LoginService,
+        private val registerService: RegisterService,
+        private val lobbyService: LobbyService,
+        private val gameService: GameService,
+        private val sessionService: SessionService,
+        private val statisticsService: StatisticsService
 ) {
     suspend fun handleIncomingMessage(socket: SocketConnection, message: String) {
         val dtoType: String

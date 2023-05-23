@@ -1,7 +1,8 @@
-package service
+package statistics
 
 import com.catan.sdk.dto.stats.GetStatsDto
 import com.catan.sdk.dto.stats.StatsDto
+import database.DatabaseService
 
 class StatisticsService(
     val databaseService: DatabaseService

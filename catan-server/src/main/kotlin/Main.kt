@@ -1,6 +1,13 @@
+import database.DatabaseService
+import game.GameService
+import lobby.LobbyService
+import login.LoginService
+import register.RegisterService
 import service.*
+import session.SessionService
 import socket.SocketController
 import socket.SocketService
+import statistics.StatisticsService
 
 fun main() {
     val databaseService = DatabaseService()

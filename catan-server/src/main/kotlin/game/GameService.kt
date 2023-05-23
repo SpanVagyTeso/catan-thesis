@@ -1,17 +1,18 @@
-package service
+package game
 
 import com.catan.sdk.dto.game.fromclient.FromClient
 import com.catan.sdk.dto.game.fromclient.FromClientPayloadType.*
 import com.catan.sdk.entities.Player
 import com.catan.sdk.entities.PlayerColor
 import com.catan.sdk.toDto
-import game.Game
+import database.DatabaseService
 import game.GameState.Ended
 import game.GameState.Won
+import session.SessionService
 
 class GameService(
-    private val sessionService: SessionService,
-    private val databaseService: DatabaseService
+        private val sessionService: SessionService,
+        private val databaseService: DatabaseService
 ) {
     val allGames = mutableListOf<Game>()
 

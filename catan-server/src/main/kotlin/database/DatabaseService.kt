@@ -1,6 +1,5 @@
-package service
+package database
 
-import database.User
 import error.UserAlreadyExists
 import org.hibernate.Session
 import org.hibernate.cfg.Configuration

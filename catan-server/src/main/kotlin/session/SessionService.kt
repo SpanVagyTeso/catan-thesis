@@ -1,4 +1,4 @@
-package service
+package session
 
 import com.catan.sdk.entities.Player
 import kotlinx.coroutines.runBlocking

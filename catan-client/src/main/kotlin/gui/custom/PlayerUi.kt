@@ -71,6 +71,7 @@ class PlayerUi(
                     }
                     button {
                         text = "Player trade"
+                        isVisible = !gameController.atBeginning()
                         action {
                             playerTrade()
                         }
