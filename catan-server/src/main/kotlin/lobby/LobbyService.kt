@@ -43,12 +43,7 @@ class LobbyService(
                 socket.sendMessage(response.toJson())
             }
 
-            REFRESH -> {
-                val response = getAvailableLobbies()
-                socket.sendMessage(response.toJson())
-            }
-
-            GET_AVAILABLE_LOBBIES -> {
+            REFRESH, GET_AVAILABLE_LOBBIES -> {
                 val response = getAvailableLobbies()
                 socket.sendMessage(response.toJson())
             }

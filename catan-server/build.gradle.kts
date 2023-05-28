@@ -34,6 +34,7 @@ dependencies {
     testImplementation("io.kotest:kotest-runner-junit5:5.5.5")
     testImplementation("io.kotest:kotest-assertions-core:5.5.5")
     testImplementation("io.mockk:mockk:1.13.4")
+    implementation("com.h2database:h2:1.3.148")
 }
 
 tasks.test {

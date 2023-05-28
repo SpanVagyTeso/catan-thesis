@@ -16,24 +16,24 @@ import com.catan.sdk.entities.Map
 import com.catan.sdk.entities.ResourceType.*
 import com.catan.sdk.entities.TradeType.*
 import com.catan.sdk.toJson
+import database.DatabaseService
 import game.GameState.*
 import kotlinx.coroutines.runBlocking
-import database.DatabaseService
 import session.SessionService
 
 class Game(
-        val players: List<Player>,
-        private val sessionService: SessionService,
-        private val databaseService: DatabaseService,
-        private val diceRoller: DiceRoller = DiceRoller(),
-        private val settlementsAtBeginning: Int = 2,
-        private val roadsAtBeginning: Int = 2,
-        private val maxSettlements: Int = 5,
-        private val maxRoads: Int = 15,
-        private val maxCities: Int = 5,
-        private val minimumForLongestRoad: Int = 5,
-        private val minimumForMostKnights: Int = 3,
-        private val developmentPool: DevelopmentPool = DevelopmentPool(
+    val players: List<Player>,
+    private val sessionService: SessionService,
+    private val databaseService: DatabaseService,
+    private val diceRoller: DiceRoller = DiceRoller(),
+    private val settlementsAtBeginning: Int = 2,
+    private val roadsAtBeginning: Int = 2,
+    private val maxSettlements: Int = 5,
+    private val maxRoads: Int = 15,
+    private val maxCities: Int = 5,
+    private val minimumForLongestRoad: Int = 5,
+    private val minimumForMostKnights: Int = 3,
+    private val developmentPool: DevelopmentPool = DevelopmentPool(
         14,
         2,
         2,
@@ -44,8 +44,8 @@ class Game(
         1,
         1
     ),
-        private val pointsToWin: Int = 10,
-        currentPlayerIndex: Int = 0
+    private val pointsToWin: Int = 10,
+    currentPlayerIndex: Int = 0
 ) {
 
     var currentPlayer: Player
@@ -200,23 +200,23 @@ class Game(
     }
 
     fun handleTradeOffer(dto: PlayerTradeDto) {
-        if(currentPlayer.resources[dto.resource]!! < dto.amount) return
-        if(dto.withWho == currentPlayer.username) return
+        if (currentPlayer.resources[dto.resource]!! < dto.amount) return
+        if (dto.withWho == currentPlayer.username) return
         currentTradeOffers.add(dto)
         sendAllPlayersResources()
     }
 
     fun acceptOffer(dto: AcceptTrade, username: String) {
-        if(dto.id >= currentTradeOffers.size) return
+        if (dto.id >= currentTradeOffers.size) return
         val trade = currentTradeOffers[dto.id]
         if (trade.withWho != username) return
         val toPlayer = players.find { it.username == trade.withWho } ?: return
         if (toPlayer.resources[trade.toResource]!! < trade.toAmount) return
-        currentPlayer.resources[trade.resource] = (currentPlayer.resources[trade.resource] ?: 0 ) - trade.amount
-        toPlayer.resources[trade.toResource] = (toPlayer.resources[trade.toResource] ?: 0 ) - trade.toAmount
+        currentPlayer.resources[trade.resource] = (currentPlayer.resources[trade.resource] ?: 0) - trade.amount
+        toPlayer.resources[trade.toResource] = (toPlayer.resources[trade.toResource] ?: 0) - trade.toAmount
 
-        currentPlayer.resources[trade.toResource] = (currentPlayer.resources[trade.toResource] ?: 0 ) + trade.toAmount
-        toPlayer.resources[trade.resource] = (toPlayer.resources[trade.resource] ?: 0 ) + trade.amount
+        currentPlayer.resources[trade.toResource] = (currentPlayer.resources[trade.toResource] ?: 0) + trade.toAmount
+        toPlayer.resources[trade.resource] = (toPlayer.resources[trade.resource] ?: 0) + trade.amount
         currentTradeOffers.clear()
         sendAllPlayersResources()
     }
@@ -758,7 +758,7 @@ class Game(
 
     fun afterGameStatistics() {
         players.forEach {
-            val user = databaseService.getUserByusername(it.username)
+            val user = databaseService.getUserByUsername(it.username)
             user.single().gamesPlayed++
             if (winners.contains(it)) {
                 user.single().gamesWon++
@@ -819,32 +819,29 @@ class Game(
     }
 
     private fun getLongestRoad(player: Player): Int {
-        val vertexes = map.vertexes.filter {
-            it.edges.find {
+        val vertexes = map.vertexes.filter { vertex ->
+            vertex.edges.find {
                 it.owner == player
             } != null
         }
         if (vertexes.isEmpty()) return 0
 
         return vertexes.maxOf {
-            println("db")
             longestRoadFrom(it, player)
         }
     }
 
-    private fun longestRoadFrom(vertex: Vertex, player: Player): Int {
-        fun recursion(v: Vertex, player: Player, discoveredVertexes: MutableSet<String>): MutableSet<String> {
-
-            if (v.owner != null && v.owner != player) return discoveredVertexes
-
+    private fun longestRoadFrom(from: Vertex, player: Player): Int {
+        fun recursion(currentVertex: Vertex, player: Player, discoveredVertexes: MutableSet<String>): MutableSet<String> {
+            if (currentVertex.owner != null && currentVertex.owner != player) return discoveredVertexes
             val deepCopied = mutableSetOf<String>()
             deepCopied.addAll(discoveredVertexes)
-            deepCopied.add(v.id)
+            deepCopied.add(currentVertex.id)
             var longest = deepCopied
-            v.edges.forEach {
+            currentVertex.edges.forEach {
                 if (it.owner != null && it.owner == player) {
-                    if (it.otherVertex(v).id !in discoveredVertexes) {
-                        val newSet = recursion(it.otherVertex(v), player, deepCopied)
+                    if (it.otherVertex(currentVertex).id !in discoveredVertexes) {
+                        val newSet = recursion(it.otherVertex(currentVertex), player, deepCopied)
                         if (newSet.size > longest.size) {
                             longest = newSet
                         }
@@ -854,7 +851,7 @@ class Game(
             }
             return longest
         }
-        return recursion(vertex, player, mutableSetOf()).size - 1
+        return recursion(from, player, mutableSetOf()).size - 1
     }
 
     //endregion

@@ -11,22 +11,22 @@ import kotlinx.coroutines.*
 import java.io.File
 
 class SocketController(
-    private val socketService: SocketService,
-    private val port: Int
+        private val socketService: SocketService,
+        private val port: Int
 ) {
     fun startController() {
         val cfg = File("build/resources/serverConfig.txt")
         var port = 0
         cfg.readLines()
         cfg.forEachLine {
-            if(it.startsWith("port=")){
+            if (it.startsWith("port=")) {
                 port = it.removePrefix("port=").toInt()
             }
         }
         runBlocking {
             val selectorManager = SelectorManager(Dispatchers.IO)
             val serverSocket = aSocket(selectorManager).tcp()
-                .bind("localhost", port)
+                    .bind("localhost", port)
             println("Server is listening at ${serverSocket.localAddress}")
             while (true) {
                 val socket = serverSocket.accept()
@@ -41,8 +41,8 @@ class SocketController(
 }
 
 class SocketConnection(
-    private val socket: Socket,
-    private val socketService: SocketService,
+        private val socket: Socket,
+        private val socketService: SocketService,
 ) {
     private val receiveChannel: ByteReadChannel = socket.openReadChannel()
     private val sendChannel: ByteWriteChannel = socket.openWriteChannel(autoFlush = true)
@@ -58,20 +58,25 @@ class SocketConnection(
                     break
                 }
                 println("Message received $message")
-                socketService.handleIncomingMessage(
-                    this@SocketConnection,
-                    message
-                )
+                try {
+                    socketService.handleIncomingMessage(
+                            this@SocketConnection,
+                            message
+                    )
+                } catch (e: Exception) {
+                    println("Something went wrong with the processing")
+                    e.printStackTrace()
+                }
 
             } catch (e: CommonError) {
                 e.printStackTrace()
                 sendMessage(
-                    BadDto("bad dto").toJson()
+                        BadDto("bad dto").toJson()
                 )
             } catch (e: BadDtoRuntimeException) {
                 e.printStackTrace()
                 sendMessage(
-                    BadDto("bad dto").toJson()
+                        BadDto("bad dto").toJson()
                 )
             } catch (e: Throwable) {
                 println("Closing: $socket")
@@ -85,7 +90,7 @@ class SocketConnection(
     }
 
     suspend fun sendMessage(msg: String) {
-        if(sendChannel.isClosedForWrite) return
+        if (sendChannel.isClosedForWrite) return
         println("Message: $msg")
         println("Is closed? :${sendChannel.isClosedForWrite}")
         sendChannel.writeStringUtf8(msg + "\n")

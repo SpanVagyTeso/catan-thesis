@@ -16,7 +16,7 @@ class LoginService(
     fun login(message: String, socket: SocketConnection): LoginSuccessDto {
         val loginDto: LoginDto = message.toDto()
 
-        val listOfUsers = dbService.getUserByusername(loginDto.username)
+        val listOfUsers = dbService.getUserByUsername(loginDto.username)
         if (listOfUsers.size != 1) {
             throw WrongUserName()
         }

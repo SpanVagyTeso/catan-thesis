@@ -12,12 +12,12 @@ import kotlinx.coroutines.runBlocking
 import session.SessionService
 
 class Lobby(
-        val lobbyId: String,
-        private val size: Int,
-        private var owner: String,
-        private val lobbyName: String,
-        private val sessionService: SessionService,
-        private val gameService: GameService
+    val lobbyId: String,
+    private val size: Int,
+    private var owner: String,
+    private val lobbyName: String,
+    private val sessionService: SessionService,
+    private val gameService: GameService
 ) {
     var isStarted = false
 
@@ -46,7 +46,7 @@ class Lobby(
         players.forEach {
             runBlocking {
                 sessionService.getSessionInfoFromUsername(it).socket.sendMessage(
-                    dto.toJson()
+                        dto.toJson()
                 )
             }
         }
@@ -55,9 +55,10 @@ class Lobby(
     fun isOwner(username: String) = owner == username
 
     fun start() {
+        if (players.size < 2) return
         isStarted = true
         game = gameService.startGame(
-            players
+                players
         )
         sendPlayers(
             StartupDto(

@@ -14,7 +14,7 @@ class GameService(
         private val sessionService: SessionService,
         private val databaseService: DatabaseService
 ) {
-    val allGames = mutableListOf<Game>()
+    private val allGames = mutableListOf<Game>()
 
     fun handleIncomingMessage(message: String) {
         with(message.toDto<FromClient>()) {

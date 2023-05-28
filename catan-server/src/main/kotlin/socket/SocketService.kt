@@ -10,7 +10,6 @@ import game.GameService
 import lobby.LobbyService
 import login.LoginService
 import register.RegisterService
-import service.*
 import session.SessionService
 import statistics.StatisticsService
 

@@ -24,7 +24,7 @@ class PlayerUi(
     fun morph() {
         clear()
         row {
-            hbox{
+            hbox {
                 hgap = 5.0
                 circle {
                     radius = 3.0
@@ -33,12 +33,12 @@ class PlayerUi(
                 label {
                     text = gameController.me!!.username
                 }
-                if(gameController.me!!.ownerOfMostKnights){
+                if (gameController.me!!.ownerOfMostKnights) {
                     label {
                         text = "Owner of most Knight(+2 Point)"
                     }
                 }
-                if(gameController.me!!.ownerOfLongestRoad){
+                if (gameController.me!!.ownerOfLongestRoad) {
                     label {
                         text = "Owner of longest road(+2 Point)"
                     }
@@ -46,7 +46,7 @@ class PlayerUi(
             }
         }
         row {
-            gridpane{
+            gridpane {
                 row {
                     button {
                         text = "Buy"
@@ -72,6 +72,11 @@ class PlayerUi(
                     button {
                         text = "Player trade"
                         isVisible = !gameController.atBeginning()
+                        if (!gameController.atBeginning()) {
+                            isDisable = if (gameController.state == Normal) {
+                                false
+                            } else gameController.offers.isEmpty()
+                        }
                         action {
                             playerTrade()
                         }

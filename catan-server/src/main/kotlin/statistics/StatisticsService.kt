@@ -8,7 +8,7 @@ class StatisticsService(
     val databaseService: DatabaseService
 ) {
     fun getStats(dto: GetStatsDto): StatsDto {
-        val users = databaseService.getUserByusername(dto.username)
+        val users = databaseService.getUserByUsername(dto.username)
         return if (users.isEmpty()) {
             StatsDto("", -1, 0)
         } else {
